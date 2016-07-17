@@ -65,6 +65,11 @@ static void mutex_lock(struct lkl_mutex *mutex)
 	WaitForSingleObject(mutex->handle, INFINITE);
 }
 
+static int mutex_try_lock(struct lkl_mutex *mutex)
+{
+	return WaitForSingleObject(mutex->handle, 0) == 0;
+}
+
 static void mutex_unlock(struct lkl_mutex *_mutex)
 {
 	if (_mutex->recursive)
@@ -237,6 +242,7 @@ struct lkl_host_operations lkl_host_ops = {
 	.mutex_alloc = mutex_alloc,
 	.mutex_free = mutex_free,
 	.mutex_lock = mutex_lock,
+	.mutex_try_lock = mutex_try_lock,
 	.mutex_unlock = mutex_unlock,
 	.tls_alloc = tls_alloc,
 	.tls_free = tls_free,

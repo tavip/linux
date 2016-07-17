@@ -186,6 +186,11 @@ static void mutex_lock(struct lkl_mutex *mutex)
 	WARN_PTHREAD(pthread_mutex_lock(&mutex->mutex));
 }
 
+static int mutex_try_lock(struct lkl_mutex *mutex)
+{
+	return pthread_mutex_trylock(&mutex->mutex) == 0;
+}
+
 static void mutex_unlock(struct lkl_mutex *_mutex)
 {
 	pthread_mutex_t *mutex = &_mutex->mutex;
@@ -322,6 +327,7 @@ struct lkl_host_operations lkl_host_ops = {
 	.mutex_alloc = mutex_alloc,
 	.mutex_free = mutex_free,
 	.mutex_lock = mutex_lock,
+	.mutex_try_lock = mutex_try_lock,
 	.mutex_unlock = mutex_unlock,
 	.tls_alloc = tls_alloc,
 	.tls_free = tls_free,

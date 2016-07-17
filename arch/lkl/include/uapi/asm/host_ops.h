@@ -33,6 +33,7 @@ struct lkl_jmp_buf {
  * determines if the mutex is recursive or not
  * @mutex_free - free a host mutex
  * @mutex_lock - acquire the mutex
+ * @mutex_try_lock - try to acquire the mutex; returns non-zero if succesful
  * @mutex_unlock - release the mutex
  *
  * @thread_create - create a new thread and run f(arg) in its context; returns a
@@ -86,6 +87,7 @@ struct lkl_host_operations {
 	struct lkl_mutex *(*mutex_alloc)(int recursive);
 	void (*mutex_free)(struct lkl_mutex *mutex);
 	void (*mutex_lock)(struct lkl_mutex *mutex);
+	int (*mutex_try_lock)(struct lkl_mutex *mutex);
 	void (*mutex_unlock)(struct lkl_mutex *mutex);
 
 	lkl_thread_t (*thread_create)(void (*f)(void *), void *arg);

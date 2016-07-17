@@ -685,6 +685,24 @@ static int test_mutex(char *str, int len)
 	lkl_host_ops.mutex_unlock(mutex);
 	lkl_host_ops.mutex_free(mutex);
 
+	mutex = lkl_host_ops.mutex_alloc(0);
+	if (!lkl_host_ops.mutex_try_lock(mutex)) {
+		ret = TEST_FAILURE;
+		goto out;
+	}
+	if (lkl_host_ops.mutex_try_lock(mutex)) {
+		ret = TEST_FAILURE;
+		goto out;
+	}
+
+	lkl_host_ops.mutex_unlock(mutex);
+	if (!lkl_host_ops.mutex_try_lock(mutex)) {
+		ret = TEST_FAILURE;
+		goto out;
+	}
+	lkl_host_ops.mutex_unlock(mutex);
+	lkl_host_ops.mutex_free(mutex);
+
 	mutex = lkl_host_ops.mutex_alloc(1);
 	lkl_host_ops.mutex_lock(mutex);
 	lkl_host_ops.mutex_lock(mutex);
@@ -692,6 +710,7 @@ static int test_mutex(char *str, int len)
 	lkl_host_ops.mutex_unlock(mutex);
 	lkl_host_ops.mutex_free(mutex);
 
+out:
 	snprintf(str, len, "%ld", ret);
 
 	return ret;
