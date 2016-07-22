@@ -51,18 +51,51 @@ static struct irq_info {
 	const char *user;
 } irqs[NR_IRQS];
 
+static bool irqs_enabled;
 
 /**
- * DO NOT run any linux calls (e.g. printk) here as they may race with the
- * existing linux threads.
+ * This function can be called from arbitrary host threads, so do not
+ * issue any Linux calls (e.g. prink) if lkl_cpu_get() was not issued
+ * before.
  */
 int lkl_trigger_irq(int irq)
 {
 	if (!irq || irq > NR_IRQS)
 		return -EINVAL;
 
-	set_irq_status(irq);
+	if (lkl_cpu_try_get()) {
+		bool resched;
+		unsigned long flags;
 
+		/*
+		 * Since this can be called from Linux context
+		 * (e.g. lkl_trigger_irq -> IRQ -> softirq -> lkl_trigger_irq)
+		 * make sure we are actually allowed to run irqs at this point
+		 */
+		if (!irqs_enabled) {
+			lkl_cpu_put();
+			goto delayed_irq;
+		}
+
+		/* interrupts handlers need to run with interrupts disabled */
+		local_irq_save(flags);
+		irq_enter();
+		generic_handle_irq(irq);
+		irq_exit();
+		local_irq_restore(flags);
+
+		resched = need_resched();
+
+		lkl_cpu_put();
+
+		if (resched)
+			lkl_cpu_wakeup();
+
+		return 0;
+	}
+
+delayed_irq:
+	set_irq_status(irq);
 	lkl_cpu_wakeup();
 
 	return 0;
@@ -128,8 +161,6 @@ void lkl_put_irq(int i, const char *user)
 
 	irqs[i].user = NULL;
 }
-
-static bool irqs_enabled;
 
 unsigned long arch_local_save_flags(void)
 {
