@@ -29,9 +29,16 @@ int lkl_mount_fs(char *fstype)
 	return 0;
 }
 
+static unsigned long long int makedev(unsigned int major, unsigned int minor)
+{
+	return ((minor & 0xff) | ((major & 0xfff) << 8)
+		| (((unsigned long long int) (minor & ~0xff)) << 12)
+		| (((unsigned long long int) (major & ~0xfff)) << 32));
+}
+
 static long get_virtio_blkdev(int disk_id)
 {
-	char sysfs_path[] = "/sysfs/block/vda/dev";
+	char sysfs_path[] = "/sysfs/block/vdaw/dev";
 	char buf[16] = { 0, };
 	long fd, ret;
 	int major, minor;
@@ -41,11 +48,13 @@ static long get_virtio_blkdev(int disk_id)
 	if (ret < 0)
 		return ret;
 
-	sysfs_path[strlen("/sysfs/block/vd")] += disk_id;
+//	sysfs_path[strlen("/sysfs/block/vd")] += disk_id;
 
 	fd = lkl_sys_open(sysfs_path, LKL_O_RDONLY, 0);
-	if (fd < 0)
+	if (fd < 0) {
+		lkl_printf("%s: %s(%d)=%d\n", __func__, sysfs_path, disk_id, fd);
 		return fd;
+	}
 
 	ret = lkl_sys_read(fd, buf, sizeof(buf));
 	if (ret < 0)
@@ -62,7 +71,10 @@ static long get_virtio_blkdev(int disk_id)
 		goto out_close;
 	}
 
-	ret = LKL_MKDEV(major, minor);
+	ret = makedev(major, minor);
+
+	lkl_printf("%s: disk %d -> dev %x (%d, %d)\n", __func__, disk_id, ret, major, minor);
+
 
 out_close:
 	lkl_sys_close(fd);

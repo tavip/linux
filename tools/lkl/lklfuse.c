@@ -518,15 +518,16 @@ static int start_lkl(void)
 
 	if (ret) {
 		fprintf(stderr, "can't mount disk: %s\n", lkl_strerror(ret));
+		return 0;
 		goto out_halt;
 	}
 
-	ret = lkl_sys_chroot(mpoint);
-	if (ret) {
-		fprintf(stderr, "can't chdir to %s: %s\n", mpoint,
-			lkl_strerror(ret));
-		goto out_umount;
-	}
+//	ret = lkl_sys_chroot(mpoint);
+//	if (ret) {
+//		fprintf(stderr, "can't chdir to %s: %s\n", mpoint,
+//			lkl_strerror(ret));
+//		goto out_umount;
+//	}
 
 	return 0;
 
@@ -562,6 +563,8 @@ int main(int argc, char **argv)
 	struct stat st;
 	char *mnt;
 	int fg, mt, ret;
+	struct lkl_disk disk2;
+	int i;
 
 	if (fuse_opt_parse(&args, &lklfuse, lklfuse_opts, lklfuse_opt_proc))
 		return 1;
@@ -580,6 +583,17 @@ int main(int argc, char **argv)
 		goto out_free;
 	}
 
+	disk2.fd = open("/home/tavi/.gitconfig", O_RDONLY);
+
+	for (i = 0; i < 48; i++) {
+		ret = lkl_disk_add(&disk2);
+		if (ret < 0) {
+			fprintf(stderr, "can't add disk [%d]: %d %s\n", i, ret, lkl_strerror(ret));
+			goto out_close_disk;
+		}
+	}
+
+
 	ret = open(lklfuse.file, lklfuse.ro ? O_RDONLY : O_RDWR);
 	if (ret < 0) {
 		perror(lklfuse.file);
@@ -595,6 +609,7 @@ int main(int argc, char **argv)
 	}
 
 	lklfuse.disk_id = ret;
+
 
 	ch = fuse_mount(mnt, &args);
 	if (!ch) {

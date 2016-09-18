@@ -51,12 +51,15 @@ dd if=/dev/zero of=$file bs=1024 seek=500000 count=1
 yes | mkfs.$fstype $file
 
 # mount with fuse
-../lklfuse $file $dir -o type=$fstype
+../lklfuse $file $dir -f -o type=$fstype &
+
+sleep 1000
 
 cd $dir
 
 # run basic tests
 basic
+
 
 # run stress-ng
 if which stress-ng; then
