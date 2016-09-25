@@ -92,7 +92,15 @@ struct task_struct *__switch_to(struct task_struct *prev,
 	abs_prev = prev;
 
 	lkl_ops->sem_up(_next->sched_sem);
-	lkl_ops->sem_down(_prev->sched_sem);
+	if (test_ti_thread_flag(_prev, TIF_SCHED_JB)) {
+		clear_ti_thread_flag(_prev, TIF_SCHED_JB);
+		lkl_ops->jmp_buf_longjmp(&_prev->sched_jb, 1);
+	} else if (test_ti_thread_flag(_prev, TIF_SCHED_EXIT)) {
+		clear_ti_thread_flag(_prev, TIF_SCHED_EXIT);
+		lkl_ops->thread_exit();
+	} else {
+		lkl_ops->sem_down(_prev->sched_sem);
+	}
 
 	if (_prev->dead) {
 		__sync_fetch_and_sub(&threads_counter, 1);
