@@ -2,6 +2,7 @@
 #include <linux/slab.h>
 #include <linux/sched.h>
 #include <asm/host_ops.h>
+#include <asm/cpu.h>
 
 static volatile int threads_counter;
 
@@ -52,9 +53,11 @@ void setup_thread_stack(struct task_struct *p, struct task_struct *org)
 
 static void kill_thread(struct thread_info *ti)
 {
-	ti->dead = true;
-	lkl_ops->sem_up(ti->sched_sem);
-	lkl_ops->thread_join(ti->tid);
+	if (!test_ti_thread_flag(ti, TIF_HOST_THREAD)) {
+		ti->dead = true;
+		lkl_ops->sem_up(ti->sched_sem);
+		lkl_ops->thread_join(ti->tid);
+	}
 	lkl_ops->sem_free(ti->sched_sem);
 
 }
@@ -69,23 +72,23 @@ void free_thread_stack(unsigned long *stack)
 
 struct thread_info *_current_thread_info = &init_thread_union.thread_info;
 
+/*
+ * schedule() expects the return of this function to be the task that we
+ * switched away from. Returning prev is not going to work because we are
+ * actually going to return the previous taks that was scheduled before the
+ * task we are going to wake up, and not the current task, e.g.:
+ *
+ * swapper -> init: saved prev on swapper stack is swapper
+ * init -> ksoftirqd0: saved prev on init stack is init
+ * ksoftirqd0 -> swapper: returned prev is swapper
+ */
+static struct task_struct *abs_prev = &init_task;
+
 struct task_struct *__switch_to(struct task_struct *prev,
 				struct task_struct *next)
 {
 	struct thread_info *_prev = task_thread_info(prev);
 	struct thread_info *_next = task_thread_info(next);
-	/*
-	 * schedule() expects the return of this function to be the task that we
-	 * switched away from. Returning prev is not going to work because we
-	 * are actually going to return the previous taks that was scheduled
-	 * before the task we are going to wake up, and not the current task,
-	 * e.g.:
-	 *
-	 * swapper -> init: saved prev on swapper stack is swapper
-	 * init -> ksoftirqd0: saved prev on init stack is init
-	 * ksoftirqd0 -> swapper: returned prev is swapper
-	 */
-	static struct task_struct *abs_prev = &init_task;
 
 	_current_thread_info = task_thread_info(next);
 	_next->prev_sched = prev;
@@ -108,6 +111,27 @@ struct task_struct *__switch_to(struct task_struct *prev,
 	}
 
 	return abs_prev;
+}
+
+void switch_to_host_task(struct task_struct *task)
+{
+	if (current == task)
+		return;
+
+	BUG_ON(!test_tsk_thread_flag(task, TIF_HOST_THREAD));
+	wake_up_process(task);
+	if (test_thread_flag(TIF_HOST_THREAD)) {
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		if (!thread_set_sched_jmp())
+			schedule();
+	} else {
+		lkl_cpu_wakeup();
+		lkl_cpu_put();
+	}
+
+	lkl_ops->sem_down(task_thread_info(task)->sched_sem);
+	schedule_tail(abs_prev);
+	BUG_ON(task != current);
 }
 
 struct thread_bootstrap_arg {
@@ -137,6 +161,11 @@ int copy_thread(unsigned long clone_flags, unsigned long esp,
 {
 	struct thread_info *ti = task_thread_info(p);
 	struct thread_bootstrap_arg *tba;
+
+	if (!esp) {
+		set_ti_thread_flag(ti, TIF_HOST_THREAD);
+		return 0;
+	}
 
 	tba = kmalloc(sizeof(*tba), GFP_KERNEL);
 	if (!tba)
