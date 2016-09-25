@@ -37,8 +37,6 @@ static void __init lkl_run_kernel(void *arg)
 	/* Nobody will ever join us */
 	lkl_ops->thread_detach();
 
-	lkl_cpu_get();
-
 	start_kernel();
 }
 
@@ -74,6 +72,8 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 	if (ret)
 		goto out_free_init_sem;
 
+	lkl_cpu_get();
+
 	ret = lkl_ops->thread_create(lkl_run_kernel, NULL);
 	if (!ret) {
 		ret = -ENOMEM;
@@ -82,7 +82,11 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 
 	lkl_ops->sem_down(init_sem);
 
+	syscalls_init();
+
+	lkl_cpu_put();
 	is_running = 1;
+
 	return 0;
 
 out_free_init_sem:
@@ -124,7 +128,7 @@ long lkl_sys_halt(void)
 
 	lkl_cpu_wait_shutdown();
 
-	free_initial_syscall_thread();
+	syscalls_cleanup();
 
 	free_mem();
 
@@ -155,9 +159,13 @@ static int lkl_run_init(struct linux_binprm *bprm)
 
 	set_binfmt(&lkl_run_init_binfmt);
 
-	initial_syscall_thread(init_sem);
+	snprintf(current->comm, sizeof(current->comm), "host0");
+	set_thread_flag(TIF_HOST_THREAD);
 
-	kernel_halt();
+	init_pid_ns.child_reaper = 0;
+
+	lkl_ops->sem_up(init_sem);
+	lkl_ops->thread_exit();
 
 	return 0;
 }
