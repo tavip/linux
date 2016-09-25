@@ -60,10 +60,15 @@ static bool irqs_enabled;
  */
 int lkl_trigger_irq(int irq)
 {
+	int ret;
+
 	if (!irq || irq > NR_IRQS)
 		return -EINVAL;
 
-	if (lkl_cpu_try_get()) {
+	ret = lkl_cpu_try_get();
+	if (ret < 0)
+		return ret;
+	if (ret) {
 		bool resched;
 		unsigned long flags;
 
