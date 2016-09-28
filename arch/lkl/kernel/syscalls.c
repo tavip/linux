@@ -68,8 +68,6 @@ static int new_host_task(struct task_struct **task)
 	*task = find_task_by_pid_ns(pid, &init_pid_ns);
 	rcu_read_unlock();
 
-	get_task_struct(*task);
-
 	host_task_id++;
 
 	snprintf((*task)->comm, sizeof((*task)->comm), "host%d", host_task_id);
@@ -93,6 +91,7 @@ static unsigned int task_key;
 
 long lkl_syscall(long no, long *params)
 {
+	struct task_struct *task = host0;
 	static int count;
 	long ret;
 
@@ -103,18 +102,16 @@ long lkl_syscall(long no, long *params)
 	count++;
 
 	if (lkl_ops->tls_get) {
-		struct task_struct *task = lkl_ops->tls_get(task_key);
-
+		task = lkl_ops->tls_get(task_key);
 		if (!task) {
 			ret = new_host_task(&task);
 			if (ret)
 				goto out;
+			lkl_ops->tls_set(task_key, task);
 		}
-
-		lkl_ops->tls_set(task_key, task);
-
-		switch_to_host_task(task);
 	}
+
+	switch_to_host_task(task);
 
 	ret = run_syscall(no, params);
 
@@ -137,22 +134,12 @@ int syscalls_init(void)
 {
 	int ret = 0;
 
+	host0 = current;
+
 	if (lkl_ops->tls_alloc) {
-		struct task_struct *task;
-
-		host0 = current;
-
 		ret = lkl_ops->tls_alloc(&task_key, del_host_task);
 		if (ret)
 			return ret;
-
-		ret = new_host_task(&task);
-		if (ret < 0)
-			return ret;
-
-		switch_to_host_task(task);
-
-		ret = lkl_ops->tls_set(task_key, task);
 	}
 
 	return ret;

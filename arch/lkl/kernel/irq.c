@@ -69,7 +69,6 @@ int lkl_trigger_irq(int irq)
 	if (ret < 0)
 		return ret;
 	if (ret) {
-		bool resched;
 		unsigned long flags;
 
 		/*
@@ -89,12 +88,18 @@ int lkl_trigger_irq(int irq)
 		irq_exit();
 		local_irq_restore(flags);
 
-		resched = need_resched();
+		if (need_resched()) {
+			if (test_thread_flag(TIF_HOST_THREAD)) {
+				set_current_state(TASK_UNINTERRUPTIBLE);
+				if (!thread_set_sched_jmp())
+					schedule();
+				return 0;
+			} else {
+				lkl_cpu_wakeup();
+			}
+		}
 
 		lkl_cpu_put();
-
-		if (resched)
-			lkl_cpu_wakeup();
 
 		return 0;
 	}

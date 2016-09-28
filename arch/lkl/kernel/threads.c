@@ -89,17 +89,17 @@ struct task_struct *__switch_to(struct task_struct *prev,
 {
 	struct thread_info *_prev = task_thread_info(prev);
 	struct thread_info *_next = task_thread_info(next);
+	unsigned long _prev_flags = _prev->flags;
 
 	_current_thread_info = task_thread_info(next);
 	_next->prev_sched = prev;
 	abs_prev = prev;
 
 	lkl_ops->sem_up(_next->sched_sem);
-	if (test_ti_thread_flag(_prev, TIF_SCHED_JB)) {
+	if (test_bit(TIF_SCHED_JB, &_prev_flags)) {
 		clear_ti_thread_flag(_prev, TIF_SCHED_JB);
 		lkl_ops->jmp_buf_longjmp(&_prev->sched_jb, 1);
-	} else if (test_ti_thread_flag(_prev, TIF_SCHED_EXIT)) {
-		clear_ti_thread_flag(_prev, TIF_SCHED_EXIT);
+	} else if (test_bit(TIF_SCHED_EXIT, &_prev_flags)) {
 		lkl_ops->thread_exit();
 	} else {
 		lkl_ops->sem_down(_prev->sched_sem);
