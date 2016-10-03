@@ -1,108 +1,181 @@
 #include <linux/kernel.h>
+#include <linux/sched.h>
 #include <asm/host_ops.h>
 #include <asm/cpu.h>
 #include <asm/thread_info.h>
-#include <linux/tick.h>
 #include <asm/unistd.h>
 #include <asm/syscalls.h>
 
-/*
- * The cpu_lock needs to be a semaphore since we may acquire the CPU
- * from one thread (host) and release it in another (idle, if the host
- * thread blocks during a system call).
- */
-static struct lkl_sem *cpu_lock;
+static void lkl_spin_lock(unsigned int *lock)
+{
+again:
+	while (*lock != 0)
+		;
+	if (__sync_lock_test_and_set(lock, 1))
+		goto again;
+}
+
+static void lkl_spin_unlock(unsigned int *lock)
+{
+	__sync_lock_release(lock);
+}
 
 /*
- * A synchronization algorithm between lkl_cpu_get() / lkl_cpu_try_get() and cpu
- * shutdown (lkl_sys_halt) is needed because lkl_cpu_get() is called from
- * destructor threads which are not controlled by the user. Since the cpu
- * shutdown process frees the semaphore we need to avoid calling the sem_down
- * functions after lkl_sys_halt() has been issued.
- *
- * This also give us race condition avoidance between lkl_trigger_irq() /
- * lkl_syscall() and lkl_sys_halt() as well as protection against calling these
- * functions before lkl_start_kernel().
- *
- * An atomic counter is used to keep track of the number of pending sem_down
- * operations and allows the cpu shutdown process to wait for these operations
- * to complete before freeing the semaphore.
- *
- * The cpu shutdown process adds MAX_PENDING to this counter which allows the
- * pending CPU users to check if the shutdown process has started. This prevents
- * "late" sem_down calls on the now freed semaphore.
- *
- * This algorithm assumes that we never have more the MAX_PENDING simultaneous
- * calls into lkl_cpu_get().
+ * This structure is used to get access to the "LKL CPU" that allows us to run
+ * Linux code. Because we have to deal with various synchronization requirements
+ * between idle thread, system calls, interrupts, "reentrancy", CPU shutdown,
+ * imbalance wake up (i.e. acquire the CPU from one thread and release it from
+ * another), we can't use a simple synchronization mechanism such as (recursive)
+ * mutex or semaphore. Instead, we use a spinlock and a bunch of status data
+ * plus a semaphore.
  */
-#define MAX_PENDING	(1UL << (sizeof(unsigned long) * 8 - 1))
+struct lkl_cpu {
+	/* spinlock */
+	unsigned int lock;
+	/* shutdown in progress */
+	bool shutdown;
+	bool irqs_pending;
+	/* no of threads waiting the CPU */
+	unsigned int sleepers;
+	/* no of times the current got the CPU */
+	unsigned int count;
+	/* current thread that owns the CPU */
+	lkl_thread_t owner;
+	/* semaphore for threads waiting the CPU */
+	struct lkl_sem *sem;
+	struct lkl_sem *idle_sem;
+	struct lkl_sem *drain_sem;
+	struct lkl_sem *shutdown_sem;
+} cpu;
 
-static unsigned long pending = MAX_PENDING;
+static int __lkl_cpu_try_get(void)
+{
+	lkl_thread_t self;
+
+	if (cpu.shutdown)
+		return -1;
+
+	self = lkl_ops->thread_self();
+
+	if (cpu.owner && cpu.owner != self)
+		return 0;
+
+	cpu.owner = self;
+	cpu.count++;
+
+	return 1;
+}
+
+static void __lkl_cpu_put(void)
+{
+	if (!cpu.count)
+		lkl_bug("%s: unbalanced put\n", __func__);
+
+	if (cpu.owner != lkl_ops->thread_self() && cpu.count > 1)
+		lkl_bug("%s: trying to put reentrant owner\n", __func__);
+
+	if (--cpu.count > 0)
+		return;
+
+	if (cpu.sleepers) {
+		cpu.sleepers--;
+		lkl_ops->sem_up(cpu.sem);
+	}
+
+	cpu.owner = 0;
+}
 
 int lkl_cpu_get(void)
 {
-	if (__sync_fetch_and_add(&pending, 1) >= MAX_PENDING)
-		return -1;
-
-	lkl_ops->sem_down(cpu_lock);
-
-	if (__sync_fetch_and_sub(&pending, 1) >= MAX_PENDING)
-		return -1;
-
-	return 0;
-}
-
-int lkl_cpu_try_get(void)
-{
 	int ret;
 
-	if (__sync_fetch_and_add(&pending, 1) >= MAX_PENDING)
-		return -1;
+	lkl_spin_lock(&cpu.lock);
+	ret = __lkl_cpu_try_get();
+	if (ret < 0) {
+		lkl_spin_unlock(&cpu.lock);
+		return ret;
+	}
 
-	ret = lkl_ops->sem_try_down(cpu_lock);
+	while (ret == 0) {
+		cpu.sleepers++;
+		lkl_spin_unlock(&cpu.lock);
+		lkl_ops->sem_down(cpu.sem);
+		lkl_spin_lock(&cpu.lock);
+		ret = __lkl_cpu_try_get();
+	}
 
-	if (__sync_fetch_and_sub(&pending, 1) >= MAX_PENDING)
-		return -1;
+	if (cpu.shutdown)
+		lkl_ops->sem_up(cpu.drain_sem);
+
+	lkl_spin_unlock(&cpu.lock);
 
 	return ret;
 }
 
-void lkl_cpu_put(void)
+void lkl_cpu_set_irqs_pending(void)
 {
-	lkl_ops->sem_up(cpu_lock);
+	cpu.irqs_pending = true;
 }
 
-static struct lkl_sem *shutdown_sem;
+void lkl_cpu_put(void)
+{
+	lkl_spin_lock(&cpu.lock);
+	while (cpu.irqs_pending) {
+		cpu.irqs_pending = false;
+		lkl_spin_unlock(&cpu.lock);
+		run_irqs();
+		lkl_spin_lock(&cpu.lock);
+	}
+	__lkl_cpu_put();
+	lkl_spin_unlock(&cpu.lock);
+}
+
+int lkl_cpu_try_get_start(void)
+{
+	int ret;
+
+	lkl_spin_lock(&cpu.lock);
+	ret =  __lkl_cpu_try_get();
+	if (ret)
+		lkl_spin_unlock(&cpu.lock);
+	return ret;
+}
+
+void lkl_cpu_try_get_stop(void)
+{
+	lkl_spin_unlock(&cpu.lock);
+}
 
 void lkl_cpu_shutdown(void)
 {
-	__sync_fetch_and_add(&pending, MAX_PENDING);
+	lkl_spin_lock(&cpu.lock);
+	cpu.shutdown = true;
+	lkl_spin_unlock(&cpu.lock);
 }
 
 void lkl_cpu_wait_shutdown(void)
 {
-	lkl_ops->sem_down(shutdown_sem);
-	lkl_ops->sem_free(shutdown_sem);
+	lkl_ops->sem_down(cpu.shutdown_sem);
+	lkl_ops->sem_free(cpu.shutdown_sem);
 }
-
-static struct lkl_sem *idle_sem;
 
 void arch_cpu_idle(void)
 {
-	if (pending >= MAX_PENDING) {
+	if (cpu.shutdown) {
+		int wait, i;
 
-		while (__sync_fetch_and_add(&pending, 0) > MAX_PENDING)
-			lkl_cpu_put();
+		lkl_spin_lock(&cpu.lock);
+		wait = cpu.sleepers;
+		while (cpu.sleepers--)
+			lkl_ops->sem_up(cpu.sem);
+		lkl_spin_unlock(&cpu.lock);
 
-		threads_cleanup();
+		for(i = 0; i < wait; i++)
+			lkl_ops->sem_down(cpu.drain_sem);
 
-		/* Shutdown the clockevents source. */
-		tick_suspend_local();
-
-		lkl_ops->sem_free(idle_sem);
-		lkl_ops->sem_up(shutdown_sem);
-		lkl_ops->sem_up(cpu_lock);
-		lkl_ops->sem_free(cpu_lock);
+		lkl_ops->sem_free(cpu.drain_sem);
+		lkl_ops->sem_free(cpu.idle_sem);
+		lkl_ops->sem_up(cpu.shutdown_sem);
 
 		lkl_ops->thread_exit();
 	}
@@ -116,7 +189,7 @@ void arch_cpu_idle(void)
 
 	lkl_cpu_put();
 
-	lkl_ops->sem_down(idle_sem);
+	lkl_ops->sem_down(cpu.idle_sem);
 
 	lkl_cpu_get();
 
@@ -127,29 +200,35 @@ void arch_cpu_idle(void)
 
 void lkl_cpu_wakeup(void)
 {
-	lkl_ops->sem_up(idle_sem);
+	lkl_ops->sem_up(cpu.idle_sem);
 }
 
 int lkl_cpu_init(void)
 {
-	cpu_lock = lkl_ops->sem_alloc(1);
-	if (!cpu_lock)
+	cpu.sem = lkl_ops->sem_alloc(0);
+	if (!cpu.sem)
 		return -ENOMEM;
 
-	idle_sem = lkl_ops->sem_alloc(0);
-	if (!idle_sem) {
-		lkl_ops->sem_free(cpu_lock);
-		return -ENOMEM;
-	}
-
-	shutdown_sem = lkl_ops->sem_alloc(0);
-	if (!shutdown_sem) {
-		lkl_ops->sem_free(idle_sem);
-		lkl_ops->sem_free(cpu_lock);
+	cpu.idle_sem = lkl_ops->sem_alloc(0);
+	if (!cpu.idle_sem) {
+		lkl_ops->sem_free(cpu.sem);
 		return -ENOMEM;
 	}
 
-	pending = 0;
+	cpu.drain_sem = lkl_ops->sem_alloc(0);
+	if (!cpu.drain_sem) {
+		lkl_ops->sem_free(cpu.sem);
+		lkl_ops->sem_free(cpu.idle_sem);
+		return -ENOMEM;
+	}
+
+	cpu.shutdown_sem = lkl_ops->sem_alloc(0);
+	if (!cpu.shutdown_sem) {
+		lkl_ops->sem_free(cpu.sem);
+		lkl_ops->sem_free(cpu.idle_sem);
+		lkl_ops->sem_free(cpu.drain_sem);
+		return -ENOMEM;
+	}
 
 	return 0;
 }

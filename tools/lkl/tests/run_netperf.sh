@@ -93,5 +93,5 @@ sudo netserver
 echo NUM=$num_runs, TEST=$test_name, TASKSET=$use_taskset
 for i in `seq $num_runs`; do
     echo Test: $i
-    $taskset_cmd ${hijack_script} netperf -H $host_ip -t $test_name -l $test_len
+    $taskset_cmd ${hijack_script} netperf -H $host_ip -t $test_name -l $test_len -D 1
 done

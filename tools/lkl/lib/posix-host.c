@@ -231,6 +231,11 @@ static int thread_join(lkl_thread_t tid)
 		return 0;
 }
 
+static lkl_thread_t thread_self(void)
+{
+	return (lkl_thread_t)pthread_self();
+}
+
 static int tls_alloc(unsigned int *key, void (*destructor)(void *))
 {
 	return pthread_key_create((pthread_key_t *)key, destructor);
@@ -319,6 +324,7 @@ struct lkl_host_operations lkl_host_ops = {
 	.thread_detach = thread_detach,
 	.thread_exit = thread_exit,
 	.thread_join = thread_join,
+	.thread_self = thread_self,
 	.sem_alloc = sem_alloc,
 	.sem_free = sem_free,
 	.sem_up = sem_up,

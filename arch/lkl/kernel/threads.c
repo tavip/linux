@@ -90,10 +90,20 @@ struct task_struct *__switch_to(struct task_struct *prev,
 	struct thread_info *_prev = task_thread_info(prev);
 	struct thread_info *_next = task_thread_info(next);
 	unsigned long _prev_flags = _prev->flags;
+	static int print = 0;
 
 	_current_thread_info = task_thread_info(next);
 	_next->prev_sched = prev;
 	abs_prev = prev;
+
+	if (test_bit(TIF_SCHED_JB, &_prev_flags))
+		print = 1;
+
+	if (print)
+		pr_info("%s: %s -> %s\n", __func__, prev->comm, next->comm);
+
+	if (test_ti_thread_flag(_next, TIF_HOST_THREAD))
+		print = 0;
 
 	lkl_ops->sem_up(_next->sched_sem);
 	if (test_bit(TIF_SCHED_JB, &_prev_flags)) {

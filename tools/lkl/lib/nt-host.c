@@ -102,9 +102,20 @@ static void thread_exit(void)
 
 static int thread_join(lkl_thread_t tid)
 {
+	HANDLE *h = (void *)tid;
+
 	/* TODO: error handling */
-	WaitForSingleObject((void *)tid, INFINITE);
+	WaitForSingleObject(h, INFINITE);
+	CloseHandle(h);
 	return 0;
+}
+
+static lkl_thread_t thread_self(void)
+{
+	HANDLE h = DuplicateHandle(GetCurrentThread());
+
+	CloseHandle(h);
+	return (lkl_thread_t)h;
 }
 
 static int tls_alloc(unsigned int *key, void (*destructor)(void *))
@@ -234,6 +245,7 @@ struct lkl_host_operations lkl_host_ops = {
 	.thread_detach = thread_detach,
 	.thread_exit = thread_exit,
 	.thread_join = thread_join,
+	.thread_self = thread_self,
 	.sem_alloc = sem_alloc,
 	.sem_free = sem_free,
 	.sem_up = sem_up,

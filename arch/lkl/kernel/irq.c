@@ -46,12 +46,13 @@ static inline void set_irq_status(int irq)
 	__sync_fetch_and_or(&irq_index_status, BIT(index));
 }
 
-
 static struct irq_info {
 	const char *user;
 } irqs[NR_IRQS];
 
 static bool irqs_enabled;
+
+static unsigned long count_irqs, count_direct_irqs;
 
 /**
  * This function can be called from arbitrary host threads, so do not
@@ -65,7 +66,12 @@ int lkl_trigger_irq(int irq)
 	if (!irq || irq > NR_IRQS)
 		return -EINVAL;
 
-	ret = lkl_cpu_try_get();
+	count_irqs++;
+
+	if (count_irqs % 10000 == 0)
+		lkl_printf("%s: %ld/%ld\n", __func__, count_direct_irqs, count_irqs);
+
+	ret = lkl_cpu_try_get_start();
 	if (ret < 0)
 		return ret;
 	if (ret) {
@@ -76,10 +82,10 @@ int lkl_trigger_irq(int irq)
 		 * (e.g. lkl_trigger_irq -> IRQ -> softirq -> lkl_trigger_irq)
 		 * make sure we are actually allowed to run irqs at this point
 		 */
-		if (!irqs_enabled) {
-			lkl_cpu_put();
+		if (!irqs_enabled)
 			goto delayed_irq;
-		}
+
+		count_direct_irqs++;
 
 		/* interrupts handlers need to run with interrupts disabled */
 		local_irq_save(flags);
@@ -90,6 +96,7 @@ int lkl_trigger_irq(int irq)
 
 		if (need_resched()) {
 			if (test_thread_flag(TIF_HOST_THREAD)) {
+				pr_info("%s: host thread\n", __func__);
 				set_current_state(TASK_UNINTERRUPTIBLE);
 				if (!thread_set_sched_jmp())
 					schedule();
@@ -106,7 +113,8 @@ int lkl_trigger_irq(int irq)
 
 delayed_irq:
 	set_irq_status(irq);
-	lkl_cpu_wakeup();
+	lkl_cpu_set_irqs_pending();
+	lkl_cpu_try_get_stop();
 
 	return 0;
 }
@@ -135,7 +143,7 @@ static inline void check_irq_status(int i, int unused)
 	for_each_bit(test_and_clear_irq_status(i), deliver_irq, i);
 }
 
-static void run_irqs(void)
+void run_irqs(void)
 {
 	for_each_bit(test_and_clear_irq_index_status(), check_irq_status, 0);
 }

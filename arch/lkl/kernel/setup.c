@@ -6,6 +6,7 @@
 #include <linux/fs.h>
 #include <linux/start_kernel.h>
 #include <linux/syscalls.h>
+#include <linux/tick.h>
 #include <asm/host_ops.h>
 #include <asm/irq.h>
 #include <asm/unistd.h>
@@ -127,6 +128,11 @@ long lkl_sys_halt(void)
 	is_running = false;
 
 	lkl_cpu_wait_shutdown();
+
+	threads_cleanup();
+
+	/* Shutdown the clockevents source. */
+	tick_suspend_local();
 
 	syscalls_cleanup();
 
