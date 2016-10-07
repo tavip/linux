@@ -197,6 +197,8 @@ static void lkl_cpu_cleanup(bool shutdown)
 		lkl_ops->mutex_free(cpu.lock);
 }
 
+extern void thread_yield(void);
+
 void arch_cpu_idle(void)
 {
 	if (cpu.shutdown_gate >= MAX_THREADS) {
@@ -216,7 +218,9 @@ void arch_cpu_idle(void)
 
 	lkl_cpu_put();
 
-	lkl_ops->sem_down(cpu.idle_sem);
+	thread_yield();
+
+	//lkl_ops->sem_down(cpu.idle_sem);
 
 	lkl_cpu_get();
 
@@ -225,7 +229,7 @@ void arch_cpu_idle(void)
 
 void lkl_cpu_wakeup(void)
 {
-	lkl_ops->sem_up(cpu.idle_sem);
+	//lkl_ops->sem_up(cpu.idle_sem);
 }
 
 int lkl_cpu_init(void)

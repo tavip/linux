@@ -1,6 +1,7 @@
 CFLAGS_posix-host.o += -D_FILE_OFFSET_BITS=64
 CFLAGS_virtio_net_vde.o += $(shell pkg-config --cflags vdeplug)
 CFLAGS_nt-host.o += -D_WIN32_WINNT=0x0600
+CFLAGS += -I$(srctree)/tools/include
 
 lkl-y += fs.o
 lkl-y += iomem.o

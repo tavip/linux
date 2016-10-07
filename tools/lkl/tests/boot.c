@@ -13,6 +13,7 @@
 #include <linux/if_tun.h>
 #include <sys/ioctl.h>
 #include <sys/epoll.h>
+#include <signal.h>
 #else
 #include <windows.h>
 #endif
@@ -141,20 +142,27 @@ static long native_getpid(void)
 #ifdef __MINGW32__
 	GetCurrentProcessId();
 #else
-	getpid();
+	sigset_t empty, old;
+
+	sigemptyset(&empty);
+
+	sigprocmask(SIG_BLOCK, &empty, &old);
 #endif
 	return 0;
 }
+
+extern long csws;
 
 int test_syscall_latency(char *str, int len)
 {
 	long min, max, avg;
 	int tmp;
+	long x = csws;
 
 	check_latency(lkl_sys_getpid, &min, &max, &avg);
 
-	tmp = snprintf(str, len, "avg/min/max lkl: %ld/%ld/%ld ",
-		       avg, min, max);
+	tmp = snprintf(str, len, "avg/min/max lkl: %ld/%ld/%ld (%ld)",
+		       avg, min, max, csws -x);
 	str += tmp;
 	len -= tmp;
 
@@ -816,6 +824,7 @@ static int test_many_syscall_threads(char *str, int len)
 
 static void thread_quit_immediately(void *unused)
 {
+	lkl_host_ops.thread_exit();
 }
 
 static int test_join(char *str, int len)
@@ -824,7 +833,7 @@ static int test_join(char *str, int len)
 	int ret = lkl_host_ops.thread_join(tid);
 
 	if (ret == 0) {
-		snprintf(str, len, "joined %ld", tid);
+		snprintf(str, len, "joined %lx", tid);
 		return TEST_SUCCESS;
 	} else {
 		snprintf(str, len, "failed joining %ld", tid);
@@ -950,7 +959,7 @@ int main(int argc, char **argv)
 	}
 	TEST(lo_ifup);
 	TEST(gettid);
-	TEST(syscall_thread);
+	//TEST(syscall_thread);
 	/*
 	 * Wine has an issue where the FlsCallback is not called when the thread
 	 * terminates which makes testing the automatic syscall threads cleanup
