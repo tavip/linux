@@ -14,7 +14,6 @@
 #include <asm/syscalls.h>
 #include <asm/syscalls_32.h>
 #include <asm/cpu.h>
-#include <asm/sched.h>
 
 static asmlinkage long sys_virtio_mmio_device_add(long base, long size,
 						  unsigned int irq);
@@ -115,7 +114,9 @@ long lkl_syscall(long no, long *params)
 	ret = run_syscall(no, params);
 
 	if (no == __NR_reboot) {
-		thread_sched_jb();
+		set_current_state(TASK_UNINTERRUPTIBLE);
+		if (!thread_set_sched_jmp())
+			schedule();
 		return ret;
 	}
 
