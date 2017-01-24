@@ -8,7 +8,6 @@
 #include <linux/tick.h>
 #include <asm/irqflags.h>
 #include <asm/host_ops.h>
-#include <asm/cpu.h>
 
 /*
  * To avoid much overhead we use an indirect approach: the irqs are marked using
@@ -63,7 +62,7 @@ int lkl_trigger_irq(int irq)
 
 	set_irq_status(irq);
 
-	lkl_cpu_wakeup();
+	wakeup_cpu();
 
 	return 0;
 }
