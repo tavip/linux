@@ -16,7 +16,6 @@
 #include <poll.h>
 #include <lkl_host.h>
 #include "iomem.h"
-#include "jmp_buf.h"
 
 /* Let's see if the host has semaphore.h */
 #include <unistd.h>
@@ -342,8 +341,6 @@ struct lkl_host_operations lkl_host_ops = {
 	.iomem_access = lkl_iomem_access,
 	.virtio_devices = lkl_virtio_devs,
 	.gettid = _gettid,
-	.jmp_buf_set = jmp_buf_set,
-	.jmp_buf_longjmp = jmp_buf_longjmp,
 };
 
 static int fd_get_capacity(struct lkl_disk disk, unsigned long long *res)
