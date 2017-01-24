@@ -59,8 +59,9 @@ void threads_cnt_dec(void);
 #define TIF_MEMDIE			5
 #define TIF_NOHZ			6
 #define TIF_SCHED_JB			7
-#define TIF_HOST_THREAD			8
-#define TIF_IDLE			9
+#define TIF_SCHED_EXIT			8
+#define TIF_HOST_THREAD			9
+#define TIF_IDLE			10
 
 #define __HAVE_THREAD_FUNCTIONS
 
