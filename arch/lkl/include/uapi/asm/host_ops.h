@@ -26,8 +26,7 @@ typedef unsigned long lkl_thread_t;
  * @sem_up - perform an up operation on the semaphore
  * @sem_down - perform a down operation on the semaphore
  *
- * @mutex_alloc - allocate and initialize a host mutex; the recursive parameter
- * determines if the mutex is recursive or not
+ * @mutex_alloc - allocate and initialize a host mutex
  * @mutex_free - free a host mutex
  * @mutex_lock - acquire the mutex
  * @mutex_unlock - release the mutex
@@ -79,7 +78,7 @@ struct lkl_host_operations {
 	void (*sem_up)(struct lkl_sem *sem);
 	void (*sem_down)(struct lkl_sem *sem);
 
-	struct lkl_mutex *(*mutex_alloc)(int recursive);
+	struct lkl_mutex *(*mutex_alloc)(void);
 	void (*mutex_free)(struct lkl_mutex *mutex);
 	void (*mutex_lock)(struct lkl_mutex *mutex);
 	void (*mutex_unlock)(struct lkl_mutex *mutex);
