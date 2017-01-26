@@ -151,6 +151,15 @@ struct lkl_dev_net_ops {
 	void (*free)(struct lkl_netdev *nd);
 };
 
+/* native threads */
+typedef unsigned long lkl_thread_t;
+lkl_thread_t thread_create(void (*fn)(void *), void *arg);
+int thread_join(lkl_thread_t tid);
+void thread_detach(void);
+void thread_exit(void);
+lkl_thread_t thread_self(void);
+int thread_equal(lkl_thread_t a, lkl_thread_t b);
+
 #ifdef __cplusplus
 }
 #endif

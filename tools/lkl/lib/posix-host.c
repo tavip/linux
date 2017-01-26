@@ -16,6 +16,7 @@
 #include <poll.h>
 #include <lkl_host.h>
 #include "iomem.h"
+#include "threads.h"
 
 /* Let's see if the host has semaphore.h */
 #include <unistd.h>
@@ -178,7 +179,8 @@ static void mutex_free(struct lkl_mutex *_mutex)
 	free(_mutex);
 }
 
-static lkl_thread_t thread_create(void (*fn)(void *), void *arg)
+
+lkl_thread_t thread_create(void (*fn)(void *), void *arg)
 {
 	pthread_t thread;
 	if (WARN_PTHREAD(pthread_create(&thread, NULL, (void* (*)(void *))fn, arg)))
@@ -187,17 +189,17 @@ static lkl_thread_t thread_create(void (*fn)(void *), void *arg)
 		return (lkl_thread_t) thread;
 }
 
-static void thread_detach(void)
+void thread_detach(void)
 {
 	WARN_PTHREAD(pthread_detach(pthread_self()));
 }
 
-static void thread_exit(void)
+void thread_exit(void)
 {
 	pthread_exit(NULL);
 }
 
-static int thread_join(lkl_thread_t tid)
+int thread_join(lkl_thread_t tid)
 {
 	if (WARN_PTHREAD(pthread_join((pthread_t)tid, NULL)))
 		return -1;
@@ -205,12 +207,12 @@ static int thread_join(lkl_thread_t tid)
 		return 0;
 }
 
-static lkl_thread_t thread_self(void)
+lkl_thread_t thread_self(void)
 {
 	return (lkl_thread_t)pthread_self();
 }
 
-static int thread_equal(lkl_thread_t a, lkl_thread_t b)
+int thread_equal(lkl_thread_t a, lkl_thread_t b)
 {
 	return pthread_equal(a, b);
 }
@@ -308,12 +310,9 @@ static long _gettid(void)
 
 struct lkl_host_operations lkl_host_ops = {
 	.panic = panic,
-	.thread_create = thread_create,
-	.thread_detach = thread_detach,
-	.thread_exit = thread_exit,
-	.thread_join = thread_join,
-	.thread_self = thread_self,
-	.thread_equal = thread_equal,
+	.thread_alloc = thread_alloc,
+	.thread_switch = thread_switch,
+	.thread_free = thread_free,
 	.sem_alloc = sem_alloc,
 	.sem_free = sem_free,
 	.sem_up = sem_up,

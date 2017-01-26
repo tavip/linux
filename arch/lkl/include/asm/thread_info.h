@@ -17,10 +17,7 @@ struct thread_info {
 	unsigned long flags;
 	int preempt_count;
 	mm_segment_t addr_limit;
-	struct lkl_sem *sched_sem;
-	bool dead;
-	lkl_thread_t tid;
-	struct task_struct *prev_sched;
+	struct lkl_thread *thread;
 	unsigned long stackend;
 };
 

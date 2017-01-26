@@ -757,7 +757,7 @@ static int test_syscall_thread(char *str, int len)
 		return TEST_FAILURE;
 	}
 
-	tid = lkl_host_ops.thread_create(test_thread, pipe_fds);
+	tid = thread_create(test_thread, pipe_fds);
 	if (!tid) {
 		snprintf(str, len, "failed to create thread");
 		return TEST_FAILURE;
@@ -772,7 +772,7 @@ static int test_syscall_thread(char *str, int len)
 		return TEST_FAILURE;
 	}
 
-	ret = lkl_host_ops.thread_join(tid);
+	ret = thread_join(tid);
 	if (ret) {
 		snprintf(str, len, "failed to join thread");
 		return TEST_FAILURE;
@@ -793,13 +793,13 @@ static int test_many_syscall_threads(char *str, int len)
 	int count = 65, ret;
 
 	while (--count > 0) {
-		tid = lkl_host_ops.thread_create(thread_get_pid, NULL);
+		tid = thread_create(thread_get_pid, NULL);
 		if (!tid) {
 			snprintf(str, len, "failed to create thread");
 			return TEST_FAILURE;
 		}
 
-		ret = lkl_host_ops.thread_join(tid);
+		ret = thread_join(tid);
 		if (ret) {
 			snprintf(str, len, "failed to join thread");
 			return TEST_FAILURE;
@@ -816,8 +816,8 @@ static void thread_quit_immediately(void *unused)
 
 static int test_join(char *str, int len)
 {
-	lkl_thread_t tid = lkl_host_ops.thread_create(thread_quit_immediately, NULL);
-	int ret = lkl_host_ops.thread_join(tid);
+	lkl_thread_t tid = thread_create(thread_quit_immediately, NULL);
+	int ret = thread_join(tid);
 
 	if (ret == 0) {
 		snprintf(str, len, "joined %ld", tid);

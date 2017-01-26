@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <lkl_host.h>
+#include "threads.h"
 
 extern void dbg_entrance();
 static int dbg_running = 0;
 
 static void dbg_thread(void* arg) {
-	lkl_host_ops.thread_detach();
+	thread_detach();
 	printf("======Enter Debug======\n");
 	dbg_entrance();
 	printf("======Exit Debug======\n");
@@ -19,7 +20,7 @@ void dbg_handler(int signum) {
 		return;
 	}
 	dbg_running = 1;
-	lkl_host_ops.thread_create(&dbg_thread, NULL);
+	thread_create(&dbg_thread, NULL);
 }
 
 #ifndef __MINGW32__

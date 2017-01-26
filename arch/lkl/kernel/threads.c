@@ -5,19 +5,6 @@
 
 static volatile int threads_counter;
 
-static int init_ti(struct thread_info *ti)
-{
-	ti->sched_sem = lkl_ops->sem_alloc(0);
-	if (!ti->sched_sem)
-		return -ENOMEM;
-
-	ti->dead = false;
-	ti->prev_sched = NULL;
-	ti->tid = 0;
-
-	return 0;
-}
-
 unsigned long *alloc_thread_stack_node(struct task_struct *task, int node)
 {
 	struct thread_info *ti;
@@ -26,13 +13,7 @@ unsigned long *alloc_thread_stack_node(struct task_struct *task, int node)
 	if (!ti)
 		return NULL;
 
-	if (init_ti(ti)) {
-		kfree(ti);
-		return NULL;
-	}
 	ti->task = task;
-
-
 	return (unsigned long *)ti;
 }
 
@@ -52,11 +33,8 @@ void setup_thread_stack(struct task_struct *p, struct task_struct *org)
 
 static void kill_thread(struct thread_info *ti)
 {
-	ti->dead = true;
-	lkl_ops->sem_up(ti->sched_sem);
-	lkl_ops->thread_join(ti->tid);
-	lkl_ops->sem_free(ti->sched_sem);
-
+	lkl_ops->thread_free(ti->thread);
+	__sync_fetch_and_sub(&threads_counter, 1);
 }
 
 void free_thread_stack(struct task_struct *tsk)
@@ -87,18 +65,9 @@ struct task_struct *__switch_to(struct task_struct *prev,
 	 */
 	static struct task_struct *abs_prev = &init_task;
 
-	_current_thread_info = task_thread_info(next);
-	_next->prev_sched = prev;
 	abs_prev = prev;
-
-	lkl_ops->sem_up(_next->sched_sem);
-	lkl_ops->sem_down(_prev->sched_sem);
-
-	if (_prev->dead) {
-		__sync_fetch_and_sub(&threads_counter, 1);
-		lkl_ops->thread_exit();
-	}
-
+	_current_thread_info = task_thread_info(next);
+	lkl_ops->thread_switch(_prev->thread, _next->thread);
 	return abs_prev;
 }
 
@@ -111,15 +80,10 @@ struct thread_bootstrap_arg {
 static void thread_bootstrap(void *_tba)
 {
 	struct thread_bootstrap_arg *tba = (struct thread_bootstrap_arg *)_tba;
-	struct thread_info *ti = tba->ti;
 	int (*f)(void *) = tba->f;
 	void *arg = tba->arg;
 
-	lkl_ops->sem_down(ti->sched_sem);
 	kfree(tba);
-	if (ti->prev_sched)
-		schedule_tail(ti->prev_sched);
-
 	f(arg);
 	do_exit(0);
 }
@@ -138,8 +102,8 @@ int copy_thread(unsigned long clone_flags, unsigned long esp,
 	tba->arg = (void *)unused;
 	tba->ti = ti;
 
-	ti->tid = lkl_ops->thread_create(thread_bootstrap, tba);
-	if (!ti->tid) {
+	ti->thread = lkl_ops->thread_alloc(thread_bootstrap, tba);
+	if (!ti->thread) {
 		kfree(tba);
 		return -ENOMEM;
 	}
@@ -151,22 +115,6 @@ int copy_thread(unsigned long clone_flags, unsigned long esp,
 
 void show_stack(struct task_struct *task, unsigned long *esp)
 {
-}
-
-/**
- * This is called before the kernel initializes, so no kernel calls (including
- * printk) can't be made yet.
- */
-void threads_init(void)
-{
-	int ret;
-	struct thread_info *ti = &init_thread_union.thread_info;
-
-	ret = init_ti(ti);
-	if (ret < 0)
-		lkl_printf("lkl: failed to allocate init schedule semaphore\n");
-
-	ti->tid = lkl_ops->thread_self();
 }
 
 void threads_cleanup(void)
@@ -187,6 +135,4 @@ void threads_cleanup(void)
 
 	while (threads_counter)
 		;
-
-	lkl_ops->sem_free(init_thread_union.thread_info.sched_sem);
 }

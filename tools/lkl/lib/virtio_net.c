@@ -2,7 +2,7 @@
 #include <lkl_host.h>
 #include "virtio.h"
 #include "endian.h"
-
+#include "threads.h"
 #include <lkl/linux/virtio_net.h>
 
 #define netdev_of(x) (container_of(x, struct virtio_net_dev, dev))
@@ -254,7 +254,7 @@ int lkl_netdev_add(struct lkl_netdev *nd, struct lkl_netdev_args* args)
 	if (dev->dev.device_features & BIT(LKL_VIRTIO_NET_F_MRG_RXBUF))
 		virtio_set_queue_max_merge_len(&dev->dev, RX_QUEUE_IDX, 65536);
 
-	dev->poll_tid = lkl_host_ops.thread_create(poll_thread, dev);
+	dev->poll_tid = thread_create(poll_thread, dev);
 	if (dev->poll_tid == 0)
 		goto out_cleanup_dev;
 
@@ -289,7 +289,7 @@ void lkl_netdev_remove(int id)
 	dev = registered_devs[id];
 
 	dev->nd->ops->poll_hup(dev->nd);
-	lkl_host_ops.thread_join(dev->poll_tid);
+	thread_join(dev->poll_tid);
 
 	ret = lkl_netdev_get_ifindex(id);
 	if (ret < 0) {

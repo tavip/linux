@@ -37,7 +37,6 @@ void __init setup_arch(char **cl)
 
 static void __init lkl_run_kernel(void *arg)
 {
-	threads_init();
 	start_kernel();
 }
 
@@ -45,6 +44,7 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 			unsigned long _mem_size,
 			const char *fmt, ...)
 {
+	struct thread_info *init_ti = &init_thread_union.thread_info;
 	va_list ap;
 	int ret;
 
@@ -71,11 +71,12 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 		goto out_free_init_sem;
 	}
 
-	ret = lkl_ops->thread_create(lkl_run_kernel, NULL);
-	if (!ret) {
+	init_ti->thread = lkl_ops->thread_alloc(lkl_run_kernel, NULL);
+	if (!init_ti->thread) {
 		ret = -ENOMEM;
 		goto out_free_idle_sem;
 	}
+	lkl_ops->thread_switch(NULL, init_ti->thread);
 
 	lkl_ops->sem_down(init_sem);
 
@@ -149,7 +150,7 @@ void arch_cpu_idle(void)
 
 		is_running = false;
 		lkl_ops->sem_up(halt_sem);
-		lkl_ops->thread_exit();
+		lkl_ops->thread_free(init_thread_union.thread_info.thread);
 	}
 
 	lkl_ops->sem_down(idle_sem);

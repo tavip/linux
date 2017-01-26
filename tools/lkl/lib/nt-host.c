@@ -246,12 +246,9 @@ static void *mem_alloc(unsigned long size)
 
 struct lkl_host_operations lkl_host_ops = {
 	.panic = panic,
-	.thread_create = thread_create,
-	.thread_detach = thread_detach,
-	.thread_exit = thread_exit,
-	.thread_join = thread_join,
-	.thread_self = thread_self,
-	.thread_equal = thread_equal,
+	.thread_alloc = thread_alloc,
+	.thread_switch = thread_switch,
+	.thread_free = thread_free,
 	.sem_alloc = sem_alloc,
 	.sem_free = sem_free,
 	.sem_up = sem_up,
