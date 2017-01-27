@@ -86,3 +86,27 @@ void thread_free(struct lkl_thread *thread)
 	if (thread_equal(thread_self(), thread->tid))
 	    thread_exit();
 }
+
+static struct lkl_sem *idle_sem;
+
+void enter_idle(void)
+{
+	if (!idle_sem) {
+		idle_sem = lkl_host_ops.sem_alloc(0);
+		if (!idle_sem)
+			return;
+	}
+
+	lkl_host_ops.sem_down(idle_sem);
+}
+
+void exit_idle(void)
+{
+	if (!idle_sem) {
+		idle_sem = lkl_host_ops.sem_alloc(0);
+		if (!idle_sem)
+			return;
+	}
+
+	lkl_host_ops.sem_up(idle_sem);
+}

@@ -87,6 +87,9 @@ struct lkl_host_operations {
 	void (*thread_switch)(struct lkl_thread *prev, struct lkl_thread *next);
 	void (*thread_free)(struct lkl_thread *thread);
 
+	void (*enter_idle)(void);
+	void (*exit_idle)(void);
+
 	struct lkl_tls_key *(*tls_alloc)(void (*destructor)(void *));
 	void (*tls_free)(struct lkl_tls_key *key);
 	int (*tls_set)(struct lkl_tls_key *key, void *data);

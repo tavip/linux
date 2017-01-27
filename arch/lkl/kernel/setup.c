@@ -14,7 +14,6 @@
 
 struct lkl_host_operations *lkl_ops;
 static char cmd_line[COMMAND_LINE_SIZE];
-static void *idle_sem;
 static void *init_sem;
 static void *halt_sem;
 static bool halt;
@@ -65,16 +64,11 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 	if (!init_sem)
 		return -ENOMEM;
 
-	idle_sem = lkl_ops->sem_alloc(0);
-	if (!idle_sem) {
-		ret = -ENOMEM;
-		goto out_free_init_sem;
-	}
 
 	init_ti->thread = lkl_ops->thread_alloc(lkl_run_kernel, NULL);
 	if (!init_ti->thread) {
 		ret = -ENOMEM;
-		goto out_free_idle_sem;
+		goto out_free_init_sem;
 	}
 	lkl_ops->thread_switch(NULL, init_ti->thread);
 
@@ -82,9 +76,6 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 
 	is_running = 1;
 	return 0;
-
-out_free_idle_sem:
-	lkl_ops->sem_free(idle_sem);
 
 out_free_init_sem:
 	lkl_ops->sem_free(init_sem);
@@ -130,7 +121,6 @@ long lkl_sys_halt(void)
 	lkl_ops->sem_down(halt_sem);
 
 	lkl_ops->sem_free(halt_sem);
-	lkl_ops->sem_free(idle_sem);
 	lkl_ops->sem_free(init_sem);
 
 	free_initial_syscall_thread();
@@ -153,7 +143,7 @@ void arch_cpu_idle(void)
 		lkl_ops->thread_free(init_thread_union.thread_info.thread);
 	}
 
-	lkl_ops->sem_down(idle_sem);
+	lkl_ops->enter_idle();
 
 	local_irq_enable();
 }
@@ -161,7 +151,7 @@ void arch_cpu_idle(void)
 void wakeup_cpu(void)
 {
         if (!halt)
-                lkl_ops->sem_up(idle_sem);
+                lkl_ops->exit_idle();
 }
 
 static int lkl_run_init(struct linux_binprm *bprm);
