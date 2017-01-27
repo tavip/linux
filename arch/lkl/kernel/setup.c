@@ -45,7 +45,12 @@ int __init lkl_start_kernel(struct lkl_host_operations *ops,
 {
 	struct thread_info *init_ti = &init_thread_union.thread_info;
 	va_list ap;
-	int ret;
+	int ret = 0;
+
+	if (ops->init)
+		ret = ops->init();
+	if (ret)
+		return ret;
 
 	lkl_ops = ops;
 	mem_size = _mem_size;
@@ -126,6 +131,9 @@ long lkl_sys_halt(void)
 	free_initial_syscall_thread();
 
 	free_mem();
+
+	if (lkl_ops->exit)
+		lkl_ops->exit();
 
 	return 0;
 }

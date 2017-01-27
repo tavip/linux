@@ -70,6 +70,8 @@ struct lkl_thread;
 struct lkl_host_operations {
 	const char *virtio_devices;
 
+	int (*init)(void);
+	void (*exit)(void);
 	void (*print)(const char *str, int len);
 	void (*panic)(void);
 
