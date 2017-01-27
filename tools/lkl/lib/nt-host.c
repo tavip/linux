@@ -167,15 +167,15 @@ static unsigned long long time_ns(void)
 	return (uli.QuadPart - DIFF_1601_TO_1970_IN_100NS) * 100;
 }
 
-struct timer {
+struct lkl_timer {
 	HANDLE queue;
 	void (*callback)(void *);
 	void *arg;
 };
 
-static void *timer_alloc(void (*fn)(void *), void *arg)
+static struct lkl_timer *timer_alloc(void (*fn)(void *), void *arg)
 {
-	struct timer *t;
+	struct lkl_timer *t;
 
 	t = malloc(sizeof(*t));
 	if (!t)
@@ -201,18 +201,16 @@ static void CALLBACK timer_callback(void *arg, BOOLEAN TimerOrWaitFired)
 		t->callback(t->arg);
 }
 
-static int timer_set_oneshot(void *timer, unsigned long ns)
+static int timer_set_oneshot(struct lkl_timer *timer, unsigned long ns)
 {
-	struct timer *t = (struct timer *)timer;
 	HANDLE tmp;
 
 	return !CreateTimerQueueTimer(&tmp, t->queue, timer_callback, t,
 				      ns / 1000000, 0, 0);
 }
 
-static void timer_free(void *timer)
+static void timer_free(struct lkl_timer *timer)
 {
-	struct timer *t = (struct timer *)timer;
 	HANDLE completion;
 
 	completion = CreateEvent(NULL, FALSE, FALSE, NULL);

@@ -6,6 +6,7 @@ struct lkl_mutex;
 struct lkl_sem;
 struct lkl_tls_key;
 struct lkl_thread;
+struct lkl_timer;
 
 /**
  * lkl_host_operations - host operations used by the Linux kernel
@@ -102,9 +103,9 @@ struct lkl_host_operations {
 
 	unsigned long long (*time)(void);
 
-	void* (*timer_alloc)(void (*fn)(void *), void *arg);
-	int (*timer_set_oneshot)(void *timer, unsigned long delta);
-	void (*timer_free)(void *timer);
+	struct lkl_timer *(*timer_alloc)(void (*fn)(void *), void *arg);
+	int (*timer_set_oneshot)(struct lkl_timer *timer, unsigned long delta);
+	void (*timer_free)(struct lkl_timer *timer);
 
 	void* (*ioremap)(long addr, int size);
 	int (*iomem_access)(const volatile void *addr, void *val, int size,

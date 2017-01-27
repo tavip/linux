@@ -61,7 +61,7 @@ static struct clocksource clocksource = {
 	.mask	= CLOCKSOURCE_MASK(64),
 };
 
-static void *timer;
+static struct lkl_timer *timer;
 
 static int timer_irq;
 
