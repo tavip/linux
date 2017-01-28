@@ -160,6 +160,24 @@ void thread_exit(void);
 lkl_thread_t thread_self(void);
 int thread_equal(lkl_thread_t a, lkl_thread_t b);
 
+enum lkl_poll_events {
+	LKL_POLLER_IN = 1,
+	LKL_POLLER_OUT = 2
+};
+
+struct lkl_poller {
+	union {
+		int fd;
+		void *handle;
+	};
+	enum lkl_poll_events events;
+	void (*poll)(struct lkl_poller *, enum lkl_poll_events);
+};
+
+int lkl_poller_add(struct lkl_poller *poller);
+int lkl_poller_del(struct lkl_poller *poller);
+void lkl_poller_update(struct lkl_poller *poller);
+
 #ifdef __cplusplus
 }
 #endif

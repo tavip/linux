@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h>
 #include <stdint.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -316,13 +318,163 @@ static long _gettid(void)
 #endif
 }
 
+#define MAX_POLLERS 1024
+static int max_poller = -1;
+static struct pollfd pfds[MAX_POLLERS];
+static struct lkl_poller *pollers[MAX_POLLERS];
+
+int lkl_poller_add(struct lkl_poller *poller)
+{
+	int i;
+
+	for(i = 0; i < MAX_POLLERS; i++) {
+		if (!pollers[i]) {
+			pollers[i] = poller;
+			if (max_poller < i)
+				max_poller = i;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+int lkl_poller_del(struct lkl_poller *poller)
+{
+	int i;
+
+	for(i = 0; i <= max_poller; i++) {
+		if (pfds[i].fd == poller->fd) {
+			pollers[i] = NULL;
+			if (max_poller == i)
+				max_poller--;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+static struct lkl_poller poll_ctrl;
+static int poll_ctrl_pipe[2];
+
+static void poll_ctrl_kick(void)
+{
+	char tmp;
+	int ret;
+
+	ret = write(poll_ctrl_pipe[1], &tmp, sizeof(tmp));
+	if (ret < 0)
+		lkl_printf("%s: %s\n", __func__,  strerror(errno));
+}
+
+void lkl_poller_update(struct lkl_poller *poller)
+{
+	poll_ctrl_kick();
+}
+
+
+static void poll_ctrl_sink(struct lkl_poller *p, enum lkl_poll_events events)
+{
+	char tmp[PIPE_BUF];
+	int ret;
+
+	ret = read(poll_ctrl_pipe[0], tmp, sizeof(tmp));
+	if (ret < 0 && errno != EAGAIN)
+		lkl_printf("%s: %s\n", __func__, strerror(errno));
+}
+
+static int init(void)
+{
+	int ret;
+
+	ret = pipe(poll_ctrl_pipe);
+	if (ret)
+		goto out;
+
+	ret = fcntl(poll_ctrl_pipe[0], F_SETFL, O_NONBLOCK);
+	if (ret)
+		goto free_pipe;
+	ret = fcntl(poll_ctrl_pipe[1], F_SETFL, O_NONBLOCK);
+	if (ret)
+		goto free_pipe;
+
+	poll_ctrl.fd = poll_ctrl_pipe[0];
+	poll_ctrl.events = LKL_POLLER_IN;
+	poll_ctrl.poll = poll_ctrl_sink;
+
+	return lkl_poller_add(&poll_ctrl);
+
+free_pipe:
+	close(poll_ctrl_pipe[0]);
+	close(poll_ctrl_pipe[1]);
+out:
+	return ret;
+}
+
+static void posix_exit(void)
+{
+	close(poll_ctrl_pipe[0]);
+	close(poll_ctrl_pipe[1]);
+}
+
+static void posix_enter_idle(void)
+{
+	int i, ret;
+
+	for(i = 0; i <= max_poller; i++) {
+		if (!pollers[i]) {
+			pfds[i].fd = -1;
+			continue;
+		}
+		pfds[i].fd = pollers[i]->fd;
+		pfds[i].events = 0;
+		if (pollers[i]->events & LKL_POLLER_IN)
+			pfds[i].events |= POLLIN|POLLPRI;
+		if (pollers[i]->events & LKL_POLLER_OUT)
+			pfds[i].events |= POLLOUT;
+	}
+
+	ret = poll(pfds, max_poller + 1, -1);
+	if (ret < 0) {
+		lkl_printf("%s: poll error: %s\n", __func__, strerror(errno));
+		return;
+	}
+
+	for(i = 0; i <= max_poller; i++) {
+		if (!pollers[i])
+			continue;
+		if (!pfds[i].revents)
+			continue;
+
+		if (pollers[i]->poll) {
+			enum lkl_poll_events events = 0;
+
+			if (pfds[i].revents & (POLLIN|POLLPRI))
+				events |= LKL_POLLER_IN;
+			if (pfds[i].revents & POLLOUT)
+				events |= LKL_POLLER_OUT;
+
+
+			pollers[i]->poll(pollers[i], events);
+		}
+	}
+}
+
+static void posix_exit_idle(void)
+{
+	poll_ctrl_kick();
+}
+
 struct lkl_host_operations lkl_host_ops = {
+	.init = init,
+	.exit = posix_exit,
 	.panic = panic,
 	.thread_alloc = thread_alloc,
 	.thread_switch = thread_switch,
 	.thread_free = thread_free,
-	.enter_idle = enter_idle,
-	.exit_idle = exit_idle,
+	.enter_idle = posix_enter_idle,
+	.exit_idle = posix_exit_idle,
 	.sem_alloc = sem_alloc,
 	.sem_free = sem_free,
 	.sem_up = sem_up,

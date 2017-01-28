@@ -7,7 +7,4 @@ struct lkl_thread *thread_alloc(void (*fn)(void *), void *arg);
 void thread_switch(struct lkl_thread *prev, struct lkl_thread *next);
 void thread_free(struct lkl_thread *thread);
 
-void enter_idle(void);
-void exit_idle(void);
-
 #endif /* _LKL_LIB_THREADS_H */
