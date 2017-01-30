@@ -162,7 +162,8 @@ int thread_equal(lkl_thread_t a, lkl_thread_t b);
 
 enum lkl_poll_events {
 	LKL_POLLER_IN = 1,
-	LKL_POLLER_OUT = 2
+	LKL_POLLER_OUT = 2,
+	LKL_POLLER_ALWAYS = 4,
 };
 
 struct lkl_poller {

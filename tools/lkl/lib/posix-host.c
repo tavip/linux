@@ -444,7 +444,8 @@ static void posix_enter_idle(void)
 	for(i = 0; i <= max_poller; i++) {
 		if (!pollers[i])
 			continue;
-		if (!pfds[i].revents)
+		if (!pfds[i].revents &&
+		    !(pollers[i]->events && LKL_POLLER_ALWAYS))
 			continue;
 
 		if (pollers[i]->poll) {
