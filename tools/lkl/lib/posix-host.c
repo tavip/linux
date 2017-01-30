@@ -418,10 +418,13 @@ static void posix_exit(void)
 	close(poll_ctrl_pipe[1]);
 }
 
-static void posix_enter_idle(void)
+static void run_poll(int idle)
 {
 	int i, ret;
 	int poll_timeout_ns = -1;
+
+	if (!idle)
+		poll_timeout_ns = 0;
 
 	for(i = 0; i <= max_poller; i++) {
 		if (!pollers[i]) {
@@ -471,9 +474,19 @@ static void posix_enter_idle(void)
 	}
 }
 
+static void posix_enter_idle(void)
+{
+	return run_poll(1);
+}
+
 static void posix_exit_idle(void)
 {
 	poll_ctrl_kick();
+}
+
+static void relax(void)
+{
+	return run_poll(0);
 }
 
 struct lkl_host_operations lkl_host_ops = {
@@ -485,6 +498,7 @@ struct lkl_host_operations lkl_host_ops = {
 	.thread_free = thread_free,
 	.enter_idle = posix_enter_idle,
 	.exit_idle = posix_exit_idle,
+	.relax = relax,
 	.sem_alloc = sem_alloc,
 	.sem_free = sem_free,
 	.sem_up = sem_up,
