@@ -86,7 +86,4 @@ void virtio_req_complete(struct virtio_req *req, uint32_t len);
 void virtio_process_queue(struct virtio_dev *dev, uint32_t qidx);
 void virtio_set_queue_max_merge_len(struct virtio_dev *dev, int q, int len);
 
-#define container_of(ptr, type, member) \
-	(type *)((char *)(ptr) - __builtin_offsetof(type, member))
-
 #endif /* _LKL_LIB_VIRTIO_H */

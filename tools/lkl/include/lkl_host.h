@@ -180,6 +180,9 @@ int lkl_poller_add(struct lkl_poller *poller);
 int lkl_poller_del(struct lkl_poller *poller);
 void lkl_poller_update(struct lkl_poller *poller);
 
+#define container_of(ptr, type, member) \
+	(type *)((char *)(ptr) - __builtin_offsetof(type, member))
+
 #ifdef __cplusplus
 }
 #endif

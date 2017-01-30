@@ -259,26 +259,72 @@ static unsigned long long time_ns(void)
 
 struct lkl_timer {
 	timer_t timer;
+	int active;
+	struct lkl_poller poller;
+	void (*fn)(void *);
+	void *arg;
 };
+
+static long timer_timeout(struct lkl_poller *p)
+{
+	struct lkl_timer *timer = container_of(p, struct lkl_timer, poller);
+	struct itimerspec ts;
+	long timeout;
+	int ret;
+
+	if (!timer->active)
+		return -1;
+
+	ret = timer_gettime(timer->timer, &ts);
+	if (ret) {
+		lkl_printf("%s: timer_gettime error: %s\n", __func__,
+			   strerror(errno));
+		return -1;
+	}
+	timeout = ts.it_value.tv_nsec + ts.it_value.tv_sec * 1000000000;
+	if (timeout <= 0)
+		return 0;
+	return timeout ;
+}
+
+static void timer_poll(struct lkl_poller *p, enum lkl_poll_events events)
+{
+	struct lkl_timer *timer = container_of(p, struct lkl_timer, poller);
+	long timeout = timer_timeout(p);
+
+	if (timeout == 0) {
+		timer->active = 0;
+		timer->fn(timer->arg);
+	}
+}
 
 static struct lkl_timer *timer_alloc(void (*fn)(void *), void *arg)
 {
 	int err;
 	struct lkl_timer *timer;
 	struct sigevent se =  {
-		.sigev_notify = SIGEV_THREAD,
-		.sigev_value = {
-			.sival_ptr = arg,
-		},
-		.sigev_notify_function = (void (*)(union sigval))fn,
+		.sigev_notify = SIGEV_NONE,
 	};
 
 	timer = malloc(sizeof(*timer));
 	if (!timer)
 		return NULL;
 
+	timer->fn = fn;
+	timer->arg = arg;
+	timer->poller.events = LKL_POLLER_ALWAYS;
+	timer->poller.timeout = timer_timeout;
+	timer->poller.poll = timer_poll;
+
 	err = timer_create(CLOCK_REALTIME, &se, &timer->timer);
 	if (err) {
+		free(timer);
+		return NULL;
+	}
+
+	err = lkl_poller_add(&timer->poller);
+	if (err) {
+		timer_delete(&timer->timer);
 		free(timer);
 		return NULL;
 	}
@@ -294,13 +340,21 @@ static int timer_set_oneshot(struct lkl_timer *timer, unsigned long ns)
 			.tv_nsec = ns % 1000000000,
 		},
 	};
+	int ret;
 
-	return timer_settime(timer->timer, 0, &ts, NULL);
+	ret = timer_settime(timer->timer, 0, &ts, NULL);
+	if (ret)
+		return ret;
+
+	timer->active = 1;
+
+	return 0;
 }
 
 static void timer_free(struct lkl_timer *timer)
 {
 	timer_delete(&timer->timer);
+	lkl_poller_del(&timer->poller);
 	free(timer);
 }
 
