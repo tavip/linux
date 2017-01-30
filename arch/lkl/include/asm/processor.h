@@ -1,11 +1,16 @@
 #ifndef _ASM_LKL_PROCESSOR_H
 #define _ASM_LKL_PROCESSOR_H
 
+#include <asm/host_ops.h>
+
 struct task_struct;
 
 static inline void cpu_relax(void)
 {
 	unsigned long flags;
+
+	if (lkl_ops->relax)
+		lkl_ops->relax();
 
 	/* since this is usually called in a tight loop waiting for some
 	 * external condition (e.g. jiffies) lets run interrupts now to allow

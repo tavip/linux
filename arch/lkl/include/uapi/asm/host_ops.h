@@ -92,6 +92,7 @@ struct lkl_host_operations {
 
 	void (*enter_idle)(void);
 	void (*exit_idle)(void);
+	void (*relax)(void);
 
 	struct lkl_tls_key *(*tls_alloc)(void (*destructor)(void *));
 	void (*tls_free)(struct lkl_tls_key *key);
