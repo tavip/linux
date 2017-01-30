@@ -421,6 +421,7 @@ static void posix_exit(void)
 static void posix_enter_idle(void)
 {
 	int i, ret;
+	int poll_timeout_ns = -1;
 
 	for(i = 0; i <= max_poller; i++) {
 		if (!pollers[i]) {
@@ -433,9 +434,17 @@ static void posix_enter_idle(void)
 			pfds[i].events |= POLLIN|POLLPRI;
 		if (pollers[i]->events & LKL_POLLER_OUT)
 			pfds[i].events |= POLLOUT;
+		if  (pollers[i]->timeout) {
+			long timeout_ns = pollers[i]->timeout(pollers[i]);
+
+			if (timeout_ns > 0 && (timeout_ns < poll_timeout_ns ||
+					       poll_timeout_ns < 0))
+				poll_timeout_ns = timeout_ns;
+		}
 	}
 
-	ret = poll(pfds, max_poller + 1, -1);
+	ret = poll(pfds, max_poller + 1,
+		   !poll_timeout_ns ? 0 : poll_timeout_ns / 10000000 + 1);
 	if (ret < 0) {
 		lkl_printf("%s: poll error: %s\n", __func__, strerror(errno));
 		return;

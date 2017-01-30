@@ -173,6 +173,7 @@ struct lkl_poller {
 	};
 	enum lkl_poll_events events;
 	void (*poll)(struct lkl_poller *, enum lkl_poll_events);
+	long (*timeout)(struct lkl_poller *);
 };
 
 int lkl_poller_add(struct lkl_poller *poller);
