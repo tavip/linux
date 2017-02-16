@@ -51,6 +51,7 @@ static int portid;
 
 struct lkl_netdev_dpdk {
 	struct lkl_netdev dev;
+	struct lkl_poller poller;
 	int portid;
 	struct rte_mempool *rxpool, *txpool; /* rin buffer pool */
 	char txpoolname[16], rxpoolname[16];
@@ -58,7 +59,6 @@ struct lkl_netdev_dpdk {
 	struct rte_mbuf *rms[MAX_PKT_BURST];
 	int npkts;
 	int bufidx;
-	int close;
 };
 
 static int net_tx(struct lkl_netdev *nd, struct iovec *iov, int cnt)
@@ -154,30 +154,6 @@ end:
 	return read;
 }
 
-static int net_poll(struct lkl_netdev *nd)
-{
-	struct lkl_netdev_dpdk *nd_dpdk =
-		container_of(nd, struct lkl_netdev_dpdk, dev);
-
-	if (nd_dpdk->close)
-		return LKL_DEV_NET_POLL_HUP;
-	/*
-	 * dpdk's interrupt mode has equivalent of epoll_wait(2),
-	 * which we can apply here. but AFAIK the mode is only available
-	 * on limited NIC drivers like ixgbe/igb/e1000 (with dpdk v2.2.0),
-	 * while vmxnet3 is not supported e.g..
-	 */
-	return LKL_DEV_NET_POLL_RX | LKL_DEV_NET_POLL_TX;
-}
-
-static void net_poll_hup(struct lkl_netdev *nd)
-{
-	struct lkl_netdev_dpdk *nd_dpdk =
-		container_of(nd, struct lkl_netdev_dpdk, dev);
-
-	nd_dpdk->close = 1;
-}
-
 static void net_free(struct lkl_netdev *nd)
 {
 	struct lkl_netdev_dpdk *nd_dpdk =
@@ -189,8 +165,6 @@ static void net_free(struct lkl_netdev *nd)
 struct lkl_dev_net_ops dpdk_net_ops = {
 	.tx = net_tx,
 	.rx = net_rx,
-	.poll = net_poll,
-	.poll_hup = net_poll_hup,
 	.free = net_free,
 };
 
@@ -217,6 +191,9 @@ struct lkl_netdev *lkl_netdev_dpdk_create(const char *ifparams)
 	nd = malloc(sizeof(struct lkl_netdev_dpdk));
 	memset(nd, 0, sizeof(struct lkl_netdev_dpdk));
 	nd->dev.ops = &dpdk_net_ops;
+	nd->poller.fd = -1;
+	nd->poller.events = LKL_POLLER_ALWAYS;
+
 	nd->portid = portid++;
 	snprintf(nd->txpoolname, 16, "%s%s", "tx-", ifparams);
 	snprintf(nd->rxpoolname, 16, "%s%s", "rx-", ifparams);

@@ -14,23 +14,8 @@
 
 struct lkl_netdev_vde {
 	struct lkl_netdev dev;
+	struct lkl_poller poller;
 	VDECONN *conn;
-};
-
-struct lkl_netdev *nuse_vif_vde_create(char *switch_path);
-static int net_vde_tx(struct lkl_netdev *nd, struct iovec *iov, int cnt);
-static int net_vde_rx(struct lkl_netdev *nd, struct iovec *iov, int cnt);
-static int net_vde_poll_with_timeout(struct lkl_netdev *nd, int timeout);
-static int net_vde_poll(struct lkl_netdev *nd);
-static void net_vde_poll_hup(struct lkl_netdev *nd);
-static void net_vde_free(struct lkl_netdev *nd);
-
-struct lkl_dev_net_ops vde_net_ops = {
-	.tx = net_vde_tx,
-	.rx = net_vde_rx,
-	.poll = net_vde_poll,
-	.poll_hup = net_vde_poll_hup,
-	.free = net_vde_free,
 };
 
 int net_vde_tx(struct lkl_netdev *nd, struct iovec *iov, int cnt)
@@ -42,8 +27,13 @@ int net_vde_tx(struct lkl_netdev *nd, struct iovec *iov, int cnt)
 	int len = (int)iov[0].iov_len;
 
 	ret = vde_send(nd_vde->conn, data, len, 0);
-	if (ret <= 0 && errno == EAGAIN)
+	if (ret <= 0) {
+		if (errno == EAGAIN) {
+			nd_vde->poller.events |= LKL_POLLER_OUT;
+			lkl_poller_update(&nd_vde->poller);
+		}
 		return -1;
+	}
 	return ret;
 }
 
@@ -55,75 +45,32 @@ int net_vde_rx(struct lkl_netdev *nd, struct iovec *iov, int cnt)
 	void *data = iov[0].iov_base;
 	int len = (int)iov[0].iov_len;
 
-	/*
-	 * Due to a bug in libvdeplug we have to first poll to make sure
-	 * that there is data available.
-	 * The correct solution would be to just use
-	 *   ret = vde_recv(nd_vde->conn, data, len, MSG_DONTWAIT);
-	 * This should be changed once libvdeplug is fixed.
-	 */
-	ret = 0;
-	if (net_vde_poll_with_timeout(nd, 0) & LKL_DEV_NET_POLL_RX)
-		ret = vde_recv(nd_vde->conn, data, len, 0);
-	if (ret <= 0)
+	ret = vde_recv(nd_vde->conn, data, len, 0);
+	if (ret <= 0) {
+		if (errno == EAGAIN) {
+			nd_vde->poller.events |= LKL_POLLER_IN;
+			lkl_poller_update(&nd_vde->poller);
+		}
 		return -1;
+	}
 	return ret;
 }
 
-int net_vde_poll_with_timeout(struct lkl_netdev *nd, int timeout)
-{
-	int ret;
-	struct lkl_netdev_vde *nd_vde =
-		container_of(nd, struct lkl_netdev_vde, dev);
-	struct pollfd pollfds[] = {
-			{
-					.fd = vde_datafd(nd_vde->conn),
-					.events = POLLIN | POLLOUT,
-			},
-			{
-					.fd = vde_ctlfd(nd_vde->conn),
-					.events = POLLHUP | POLLIN
-			}
-	};
-
-	while (poll(pollfds, 2, timeout) < 0 && errno == EINTR)
-		;
-
-	ret = 0;
-
-	if (pollfds[1].revents & (POLLHUP | POLLNVAL | POLLIN))
-		return LKL_DEV_NET_POLL_HUP;
-	if (pollfds[0].revents & (POLLHUP | POLLNVAL))
-		return LKL_DEV_NET_POLL_HUP;
-
-	if (pollfds[0].revents & POLLIN)
-		ret |= LKL_DEV_NET_POLL_RX;
-	if (pollfds[0].revents & POLLOUT)
-		ret |= LKL_DEV_NET_POLL_TX;
-
-	return ret;
-}
-
-int net_vde_poll(struct lkl_netdev *nd)
-{
-	return net_vde_poll_with_timeout(nd, -1);
-}
-
-void net_vde_poll_hup(struct lkl_netdev *nd)
-{
-	struct lkl_netdev_vde *nd_vde =
-		container_of(nd, struct lkl_netdev_vde, dev);
-
-	vde_close(nd_vde->conn);
-}
 
 void net_vde_free(struct lkl_netdev *nd)
 {
 	struct lkl_netdev_vde *nd_vde =
 		container_of(nd, struct lkl_netdev_vde, dev);
 
+	vde_close(nd_vde->conn);
 	free(nd_vde);
 }
+
+struct lkl_dev_net_ops vde_net_ops = {
+	.tx = net_vde_tx,
+	.rx = net_vde_rx,
+	.free = net_vde_free,
+};
 
 struct lkl_netdev *lkl_netdev_vde_create(char const *switch_path)
 {
@@ -138,6 +85,7 @@ struct lkl_netdev *lkl_netdev_vde_create(char const *switch_path)
 		return 0;
 	}
 	nd->dev.ops = &vde_net_ops;
+
 
 	/* vde_open() allows the null pointer as path which means
 	 * "VDE default path"
@@ -160,10 +108,14 @@ struct lkl_netdev *lkl_netdev_vde_create(char const *switch_path)
 	nd->conn = vde_open(switch_path_copy, "lkl-virtio-net", &open_args);
 	free(switch_path_copy);
 	if (nd->conn == 0) {
+		free(nd);
 		fprintf(stderr, "Failed to connect to vde switch.\n");
 		/* TODO: propagate the error state, maybe use errno? */
-		return 0;
+		return NULL;
 	}
+
+	nd->poller.fd = vde_datafd(nd->conn);
+	nd->poller.events = 0;
 
 	return &nd->dev;
 }

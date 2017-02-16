@@ -75,9 +75,31 @@ struct lkl_dev_blk_ops {
 	int (*request)(struct lkl_disk disk, struct lkl_blk_req *req);
 };
 
+enum lkl_poll_events {
+	LKL_POLLER_IN = 1,
+	LKL_POLLER_OUT = 2,
+	LKL_POLLER_ALWAYS = 4,
+};
+
+struct lkl_poller {
+	union {
+		int fd;
+		void *handle;
+	};
+	enum lkl_poll_events events;
+	void (*poll)(struct lkl_poller *, enum lkl_poll_events);
+	long (*timeout)(struct lkl_poller *);
+};
+
+int lkl_poller_add(struct lkl_poller *poller);
+int lkl_poller_del(struct lkl_poller *poller);
+void lkl_poller_update(struct lkl_poller *poller);
+
 struct lkl_netdev {
+	struct lkl_poller poller;
 	struct lkl_dev_net_ops *ops;
 	uint8_t has_vnet_hdr: 1;
+	struct virtio_dev *dev;
 };
 
 /**
@@ -113,33 +135,6 @@ struct lkl_dev_net_ops {
 	 */
 	int (*rx)(struct lkl_netdev *nd, struct iovec *iov, int cnt);
 
-#define LKL_DEV_NET_POLL_RX		1
-#define LKL_DEV_NET_POLL_TX		2
-#define LKL_DEV_NET_POLL_HUP		4
-
-	/**
-	 * @poll: polls a net device
-	 *
-	 * Supports the following events: LKL_DEV_NET_POLL_RX
-	 * (readable), LKL_DEV_NET_POLL_TX (writable) or
-	 * LKL_DEV_NET_POLL_HUP (the close operations has been issued
-	 * and we need to clean up). Blocks until one event is
-	 * available.
-	 *
-	 * @nd - pointer to the network device
-	 *
-	 * @returns - LKL_DEV_NET_POLL_RX, LKL_DEV_NET_POLL_TX,
-	 * LKL_DEV_NET_POLL_HUP or a negative value for errors
-	 */
-	int (*poll)(struct lkl_netdev *nd);
-
-	/**
-	 * @poll_hup: make poll wakeup and return LKL_DEV_NET_POLL_HUP
-	 *
-	 * @nd - pointer to the network device
-	 */
-	void (*poll_hup)(struct lkl_netdev *nd);
-
 	/**
 	 * @free: frees a network device
 	 *
@@ -159,26 +154,6 @@ void thread_detach(void);
 void thread_exit(void);
 lkl_thread_t thread_self(void);
 int thread_equal(lkl_thread_t a, lkl_thread_t b);
-
-enum lkl_poll_events {
-	LKL_POLLER_IN = 1,
-	LKL_POLLER_OUT = 2,
-	LKL_POLLER_ALWAYS = 4,
-};
-
-struct lkl_poller {
-	union {
-		int fd;
-		void *handle;
-	};
-	enum lkl_poll_events events;
-	void (*poll)(struct lkl_poller *, enum lkl_poll_events);
-	long (*timeout)(struct lkl_poller *);
-};
-
-int lkl_poller_add(struct lkl_poller *poller);
-int lkl_poller_del(struct lkl_poller *poller);
-void lkl_poller_update(struct lkl_poller *poller);
 
 #define container_of(ptr, type, member) \
 	(type *)((char *)(ptr) - __builtin_offsetof(type, member))

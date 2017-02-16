@@ -32,8 +32,6 @@ struct virtio_net_dev {
 	struct virtio_dev dev;
 	struct lkl_virtio_net_config config;
 	struct lkl_netdev *nd;
-	struct lkl_mutex **queue_locks;
-	lkl_thread_t poll_tid;
 };
 
 static int net_check_features(struct virtio_dev *dev)
@@ -44,15 +42,6 @@ static int net_check_features(struct virtio_dev *dev)
 	return -LKL_EINVAL;
 }
 
-static void net_acquire_queue(struct virtio_dev *dev, int queue_idx)
-{
-	lkl_host_ops.mutex_lock(netdev_of(dev)->queue_locks[queue_idx]);
-}
-
-static void net_release_queue(struct virtio_dev *dev, int queue_idx)
-{
-	lkl_host_ops.mutex_unlock(netdev_of(dev)->queue_locks[queue_idx]);
-}
 
 /*
  * The buffers passed through "req" from the virtio_net driver always starts
@@ -135,30 +124,7 @@ static int net_enqueue(struct virtio_dev *dev, int q, struct virtio_req *req)
 static struct virtio_dev_ops net_ops = {
 	.check_features = net_check_features,
 	.enqueue = net_enqueue,
-	.acquire_queue = net_acquire_queue,
-	.release_queue = net_release_queue,
 };
-
-void poll_thread(void *arg)
-{
-	struct virtio_net_dev *dev = arg;
-
-	/* Synchronization is handled in virtio_process_queue */
-	do {
-		int ret = dev->nd->ops->poll(dev->nd);
-
-		if (ret < 0) {
-			lkl_printf("virtio net poll error: %d\n", ret);
-			continue;
-		}
-		if (ret & LKL_DEV_NET_POLL_HUP)
-			break;
-		if (ret & LKL_DEV_NET_POLL_RX)
-			virtio_process_queue(&dev->dev, 0);
-		if (ret & LKL_DEV_NET_POLL_TX)
-			virtio_process_queue(&dev->dev, 1);
-	} while (1);
-}
 
 struct virtio_net_dev *registered_devs[MAX_NET_DEVS];
 static int registered_dev_idx = 0;
@@ -176,35 +142,19 @@ static int dev_register(struct virtio_net_dev *dev)
 	}
 }
 
-static void free_queue_locks(struct lkl_mutex **queues, int num_queues)
+static void virtio_net_poll(struct lkl_poller *p, enum lkl_poll_events events)
 {
-	int i = 0;
-	if (!queues)
-		return;
+	struct lkl_netdev *nd =	container_of(p, struct lkl_netdev, poller);
 
-	for (i = 0; i < num_queues; i++)
-		lkl_host_ops.mutex_free(queues[i]);
-
-	lkl_host_ops.mem_free(queues);
-}
-
-static struct lkl_mutex **init_queue_locks(int num_queues)
-{
-	int i;
-	struct lkl_mutex **ret = lkl_host_ops.mem_alloc(
-		sizeof(struct lkl_mutex*) * num_queues);
-	if (!ret)
-		return NULL;
-
-	for (i = 0; i < num_queues; i++) {
-		ret[i] = lkl_host_ops.mutex_alloc();
-		if (!ret[i]) {
-			free_queue_locks(ret, i);
-			return NULL;
-		}
+	if ((events & LKL_POLLER_IN) || (events & LKL_POLLER_ALWAYS)) {
+		nd->poller.events &= ~LKL_POLL_IN;
+		virtio_process_queue(nd->dev, 0);
 	}
 
-	return ret;
+	if ((events & LKL_POLLER_OUT) || (events & LKL_POLLER_ALWAYS)) {
+		nd->poller.events &= ~LKL_POLL_OUT;
+		virtio_process_queue(nd->dev, 1);
+	}
 }
 
 int lkl_netdev_add(struct lkl_netdev *nd, struct lkl_netdev_args* args)
@@ -231,17 +181,8 @@ int lkl_netdev_add(struct lkl_netdev *nd, struct lkl_netdev_args* args)
 	dev->dev.config_len = sizeof(dev->config);
 	dev->dev.ops = &net_ops;
 	dev->nd = nd;
-	dev->queue_locks = init_queue_locks(NUM_QUEUES);
+	nd->dev = &dev->dev;
 
-	if (!dev->queue_locks)
-		goto out_free;
-
-	/*
-	 * MUST match the number of queue locks we initialized. We could init
-	 * the queues in virtio_dev_setup to help enforce this, but netdevs are
-	 * the only flavor that need these locks, so it's better to do it
-	 * here.
-	 */
 	ret = virtio_dev_setup(&dev->dev, NUM_QUEUES, QUEUE_DEPTH);
 
 	if (ret)
@@ -254,22 +195,24 @@ int lkl_netdev_add(struct lkl_netdev *nd, struct lkl_netdev_args* args)
 	if (dev->dev.device_features & BIT(LKL_VIRTIO_NET_F_MRG_RXBUF))
 		virtio_set_queue_max_merge_len(&dev->dev, RX_QUEUE_IDX, 65536);
 
-	dev->poll_tid = thread_create(poll_thread, dev);
-	if (dev->poll_tid == 0)
+	nd->poller.poll = virtio_net_poll;
+	ret = lkl_poller_add(&nd->poller);
+	if (ret < 0)
 		goto out_cleanup_dev;
 
 	ret = dev_register(dev);
 	if (ret < 0)
-		goto out_cleanup_dev;
+		goto out_del_poller;
 
 	return registered_dev_idx++;
+
+out_del_poller:
+	lkl_poller_del(&nd->poller);
 
 out_cleanup_dev:
 	virtio_dev_cleanup(&dev->dev);
 
 out_free:
-	if (dev->queue_locks)
-		free_queue_locks(dev->queue_locks, NUM_QUEUES);
 	lkl_host_ops.mem_free(dev);
 
 	return ret;
@@ -288,9 +231,6 @@ void lkl_netdev_remove(int id)
 
 	dev = registered_devs[id];
 
-	dev->nd->ops->poll_hup(dev->nd);
-	thread_join(dev->poll_tid);
-
 	ret = lkl_netdev_get_ifindex(id);
 	if (ret < 0) {
 		lkl_printf("%s: failed to get ifindex for id %d: %s\n",
@@ -305,9 +245,10 @@ void lkl_netdev_remove(int id)
 		return;
 	}
 
+	lkl_poller_del(&dev->nd->poller);
+
 	virtio_dev_cleanup(&dev->dev);
 
-	free_queue_locks(dev->queue_locks, NUM_QUEUES);
 	lkl_host_ops.mem_free(dev);
 }
 
