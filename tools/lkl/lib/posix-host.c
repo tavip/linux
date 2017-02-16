@@ -37,10 +37,6 @@ static void print(const char *str, int len)
 	ret = write(STDOUT_FILENO, str, len);
 }
 
-struct lkl_mutex {
-	pthread_mutex_t mutex;
-};
-
 struct lkl_sem {
 #ifdef _POSIX_SEMAPHORES
 	sem_t sem;
@@ -138,49 +134,6 @@ static void sem_down(struct lkl_sem *sem)
 	WARN_PTHREAD(pthread_mutex_unlock(&sem->lock));
 #endif /* _POSIX_SEMAPHORES */
 }
-
-static struct lkl_mutex *mutex_alloc(void)
-{
-	struct lkl_mutex *_mutex = malloc(sizeof(struct lkl_mutex));
-	pthread_mutex_t *mutex = NULL;
-	pthread_mutexattr_t attr;
-
-	if (!_mutex)
-		return NULL;
-
-	mutex = &_mutex->mutex;
-	WARN_PTHREAD(pthread_mutexattr_init(&attr));
-
-	/* PTHREAD_MUTEX_ERRORCHECK is *very* useful for debugging,
-	 * but has some overhead, so we provide an option to turn it
-	 * off. */
-#ifdef DEBUG
-	WARN_PTHREAD(pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK));
-#endif /* DEBUG */
-
-	WARN_PTHREAD(pthread_mutex_init(mutex, &attr));
-
-	return _mutex;
-}
-
-static void mutex_lock(struct lkl_mutex *mutex)
-{
-	WARN_PTHREAD(pthread_mutex_lock(&mutex->mutex));
-}
-
-static void mutex_unlock(struct lkl_mutex *_mutex)
-{
-	pthread_mutex_t *mutex = &_mutex->mutex;
-	WARN_PTHREAD(pthread_mutex_unlock(mutex));
-}
-
-static void mutex_free(struct lkl_mutex *_mutex)
-{
-	pthread_mutex_t *mutex = &_mutex->mutex;
-	WARN_PTHREAD(pthread_mutex_destroy(mutex));
-	free(_mutex);
-}
-
 
 lkl_thread_t thread_create(void (*fn)(void *), void *arg)
 {
@@ -557,10 +510,6 @@ struct lkl_host_operations lkl_host_ops = {
 	.sem_free = sem_free,
 	.sem_up = sem_up,
 	.sem_down = sem_down,
-	.mutex_alloc = mutex_alloc,
-	.mutex_free = mutex_free,
-	.mutex_lock = mutex_lock,
-	.mutex_unlock = mutex_unlock,
 	.tls_alloc = tls_alloc,
 	.tls_free = tls_free,
 	.tls_set = tls_set,

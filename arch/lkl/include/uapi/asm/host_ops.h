@@ -81,11 +81,6 @@ struct lkl_host_operations {
 	void (*sem_up)(struct lkl_sem *sem);
 	void (*sem_down)(struct lkl_sem *sem);
 
-	struct lkl_mutex *(*mutex_alloc)(void);
-	void (*mutex_free)(struct lkl_mutex *mutex);
-	void (*mutex_lock)(struct lkl_mutex *mutex);
-	void (*mutex_unlock)(struct lkl_mutex *mutex);
-
 	struct lkl_thread *(*thread_alloc)(void (*f)(void *), void *arg);
 	void (*thread_switch)(struct lkl_thread *prev, struct lkl_thread *next);
 	void (*thread_free)(struct lkl_thread *thread);

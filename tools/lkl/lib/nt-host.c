@@ -7,10 +7,6 @@
 
 #define DIFF_1601_TO_1970_IN_100NS (11644473600L * 10000000L)
 
-struct lkl_mutex {
-	HANDLE mutex;
-};
-
 struct lkl_sem {
 	HANDLE sem;
 };
@@ -41,32 +37,6 @@ static void sem_free(struct lkl_sem *sem)
 {
 	CloseHandle(sem->sem);
 	free(sem);
-}
-
-static struct lkl_mutex *mutex_alloc(void)
-{
-	struct lkl_mutex *_mutex = malloc(sizeof(struct lkl_mutex));
-	if (!_mutex)
-		return NULL;
-
-	_mutex->mutex = CreateMutex(0, FALSE, 0);
-	return _mutex;
-}
-
-static void mutex_lock(struct lkl_mutex *mutex)
-{
-	WaitForSingleObject(mutex->mutex, INFINITE);
-}
-
-static void mutex_unlock(struct lkl_mutex *_mutex)
-{
-	ReleaseMutex(_mutex->mutex);
-}
-
-static void mutex_free(struct lkl_mutex *_mutex)
-{
-	CloseHandle(_mutex->mutex);
-	free(_mutex);
 }
 
 static lkl_thread_t thread_create(void (*fn)(void *), void *arg)
@@ -253,10 +223,6 @@ struct lkl_host_operations lkl_host_ops = {
 	.sem_free = sem_free,
 	.sem_up = sem_up,
 	.sem_down = sem_down,
-	.mutex_alloc = mutex_alloc,
-	.mutex_free = mutex_free,
-	.mutex_lock = mutex_lock,
-	.mutex_unlock = mutex_unlock,
 	.tls_alloc = tls_alloc,
 	.tls_free = tls_free,
 	.tls_set = tls_set,
