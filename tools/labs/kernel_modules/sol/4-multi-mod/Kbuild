@@ -1,0 +1,5 @@
+EXTRA_CFLAGS = -g
+
+obj-m   = multi-mod.o
+multi-mod-y =  mod1.o mod2.o  
+

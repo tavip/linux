@@ -1,0 +1,3 @@
+
+SUBSYSTEM=="pnp", ATTRS{id}=="PNP0400", RUN+="/sbin/insmod /root/pso/lab12/pnp/mydev/mydev.ko"
+

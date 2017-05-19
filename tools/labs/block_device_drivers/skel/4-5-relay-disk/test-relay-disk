@@ -1,0 +1,8 @@
+#!/bin/sh
+
+PHYSICAL_DISK_NAME="/dev/vdb"
+echo "abc" > "$PHYSICAL_DISK_NAME"
+insmod relay-disk.ko
+rmmod relay-disk
+sleep 1
+echo -n "read from $PHYSICAL_DISK_NAME: "; cat "$PHYSICAL_DISK_NAME" | head -c 3| hexdump -v -e '/1 "%02X "'; echo
