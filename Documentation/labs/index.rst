@@ -15,5 +15,8 @@ driver topics. For each topic there are two parts:
 
 .. toctree::
 
-   vm
-   skel
+   vm.rst
+   skel.rst
+   interrupts.rst
+   deferred_work.rst
+   memory_mapping.rst
