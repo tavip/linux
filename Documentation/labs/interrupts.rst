@@ -1,6 +1,6 @@
-===================
-I/O and Interrupts 
-===================
+==========================
+I/O access and Interrupts 
+==========================
 
 
 Lab objectives
@@ -101,14 +101,18 @@ Request access to I/O ports
 
 Before accessing I/O ports we first must request access to them, to make sure there is only one user. In order to do so, one must use the :c:func:`request_region` function:
 
-.. kernel-doc:: include/linux/ioport.h
-   :functions: request_region
+.. code-block:: c
+
+   #include <linux/ioport.h>
+
+   struct resource *request_region(unsigned long first, unsigned long n,
+		                   const char *name);
 
 To release a reserved region one must use the :c:func:`release_region` function:
 
-.. kernel-doc:: include/linux/ioport.h
-   :functions: release_region
+.. code-block:: c
 
+   void release_region(unsigned long start, unsigned long n);
 
 For example, the serial port COM1 has the base address 0x3F8 and it
 has 8 ports and this is a code snippet of how to request access to
@@ -548,17 +552,17 @@ as follows:
 
    static spinlock_t lock;
    
-   / * IRQ handling routine: interrupt context * /
+   /* IRQ handling routine: interrupt context */
    irqreturn_t so2_kbd_interrupt_handle(int irq_no, void * dev_id)
    {
        ...
        spin_lock(&lock);
-       / * Critical region - access shared resource */
+       /* Critical region - access shared resource */
        spin_unlock (&lock);
        ...
    }
    
-   / * Process context: Disable interrupts when locking * /
+   /* Process context: Disable interrupts when locking */
    static void my_access(void)
    {
        unsigned long flags;
