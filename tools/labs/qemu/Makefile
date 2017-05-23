@@ -38,7 +38,7 @@ rootfs.$(ARCH).img: $(YOCTO_IMAGE)
 	rmdir $(TEMPDIR)
 	ln -f $(YOCTO_IMAGE) rootfs.img
 
-vmlinux:
+vmlinux: zImage.$(ARCH)
 	ln -s $(KDIR)/vmlinux vmlinux
 
 $(YOCTO_IMAGE):
