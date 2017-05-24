@@ -19,7 +19,7 @@ QEMU_OPTS = -kernel zImage.$(ARCH) \
 	--append "root=/dev/vda console=hvc0" \
 	--display $(QEMU_DISPLAY) -s
 
-boot: rootfs.$(ARCH).img zImage.x86 tap0
+boot: rootfs.$(ARCH).img zImage.$(ARCH) tap0
 	ARCH=$(ARCH) qemu/qemu.sh $(QEMU_OPTS)
 
 TEMPDIR := $(shell mktemp -u)
@@ -29,7 +29,7 @@ zImage.$(ARCH):
 	$(MAKE) -C $(KDIR) oldnoconfig && $(MAKE) -C $(KDIR)
 	ln -s $(KDIR)/arch/$(ARCH)/boot/$(b)zImage zImage.x86
 
-rootfs.$(ARCH).img: $(YOCTO_IMAGE)
+rootfs.$(ARCH).img: $(YOCTO_IMAGE) zImage.$(ARCH)
 	$(MAKE) -C $(KDIR) modules
 	mkdir $(TEMPDIR)
 	sudo mount -t ext4 -o loop $(YOCTO_IMAGE) $(TEMPDIR)
@@ -38,7 +38,7 @@ rootfs.$(ARCH).img: $(YOCTO_IMAGE)
 	rmdir $(TEMPDIR)
 	ln -f $(YOCTO_IMAGE) rootfs.img
 
-vmlinux: zImage.$(ARCH)
+vmlinux.$(ARCH): zImage.$(ARCH)
 	ln -s $(KDIR)/vmlinux vmlinux
 
 $(YOCTO_IMAGE):
@@ -51,5 +51,5 @@ tap0:
 .PHONY: run clean tap0
 
 clean:
-	rm -f zImage.* vmlinux.* rootfs.*.img core-image-*.ext4
+	rm -f zImage.* vmlinux.* rootfs.*.img core-image-*.ext4 $(KDIR)/.config
 

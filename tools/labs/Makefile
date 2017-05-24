@@ -6,7 +6,7 @@ all: build_modules
 
 include qemu/Makefile
 
-build_modules: vmlinux $(shell find $(LABS) -name Kbuild | xargs dirname)
+build_modules: zImage.$(ARCH) $(shell find $(LABS) -name Kbuild | xargs dirname)
 	for i in $^; do $(MAKE) -C $(KDIR) M=$(PWD)/$$i; done
 
 clean_modules: $(shell find $(LABS) -name Kbuild | xargs dirname)
