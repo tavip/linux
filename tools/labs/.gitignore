@@ -4,3 +4,4 @@ zImage
 serial.pts
 rootfs.img
 core-image-minimal-*.ext4
+.modinst

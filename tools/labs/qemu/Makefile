@@ -3,6 +3,8 @@ ARCH ?= x86
 ifeq ($(ARCH),x86)
 b = b
 endif
+ZIMAGE=$(KDIR)/arch/$(ARCH)/boot/$(b)zImage
+KCONFIG=$(KDIR)/.config
 
 YOCTO_URL=http://downloads.yoctoproject.org/releases/yocto/yocto-2.3/machines/qemu/qemu$(ARCH)/
 YOCTO_IMAGE=core-image-minimal-qemu$(ARCH).ext4
@@ -11,7 +13,7 @@ YOCTO_IMAGE=core-image-minimal-qemu$(ARCH).ext4
 #YOCTO_IMAGE=core-image-sato-qemu$(ARCH).ext4
 #YOCTO_IMAGE=core-image-sato-sdk-qemu$(ARCH).ext4
 
-QEMU_OPTS = -kernel zImage \
+QEMU_OPTS = -kernel $(ZIMAGE) \
 	-device virtio-serial \
 	-chardev pty,id=virtiocon0 -device virtconsole,chardev=virtiocon0 \
 	-net nic,model=virtio,vlan=0 -net tap,ifname=tap0,vlan=0,script=no,downscript=no \
@@ -19,27 +21,29 @@ QEMU_OPTS = -kernel zImage \
 	--append "root=/dev/vda console=hvc0" \
 	--display $(QEMU_DISPLAY) -s
 
-boot: $(YOCTO_IMAGE) zImage tap0
+boot: .modinst tap0
 	ARCH=$(ARCH) qemu/qemu.sh $(QEMU_OPTS)
 
 TEMPDIR := $(shell mktemp -u)
 
-zImage:
-	cp qemu/kernel_config.x86 $(KDIR)/.config
-	$(MAKE) -C $(KDIR) oldnoconfig && $(MAKE) -C $(KDIR)
-	ln -sf $(KDIR)/arch/$(ARCH)/boot/$(b)zImage zImage
+$(KCONFIG): qemu/kernel_config.x86
+	cp $^ $@
+	$(MAKE) -C $(KDIR) oldnoconfig
+
+$(ZIMAGE): $(KCONFIG)
+	$(MAKE) -C $(KDIR)
 	$(MAKE) -C $(KDIR) modules
+
+.modinst: $(ZIMAGE) $(YOCTO_IMAGE)
 	mkdir $(TEMPDIR)
 	sudo mount -t ext4 -o loop $(YOCTO_IMAGE) $(TEMPDIR)
 	sudo $(MAKE) -C $(KDIR) modules_install INSTALL_MOD_PATH=$(TEMPDIR)
 	sudo umount $(YOCTO_IMAGE)
 	rmdir $(TEMPDIR)
+	sleep 1 && touch .modinst
 
-gdb: vmlinux
-	gdb -ex "target remote localhost:1234" vmlinux
-
-vmlinux: zImage
-	ln -fs $(KDIR)/vmlinux vmlinux
+gdb: $(ZIMAGE)
+	gdb -ex "target remote localhost:1234" $(KDIR)/vmlinux
 
 $(YOCTO_IMAGE):
 	wget $(YOCTO_URL)/$(YOCTO_IMAGE)
@@ -48,9 +52,8 @@ $(YOCTO_IMAGE):
 tap0:
 	qemu/create_net.sh $@
 
-.PHONY: run clean tap0
+clean::
+	rm -f .modinst
 
-clean:
-	rm -f zImage vmlinux $(KDIR)/.config
+.PHONY: clean tap0
 
-.NOTPARALLEL:
