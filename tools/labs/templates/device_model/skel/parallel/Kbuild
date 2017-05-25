@@ -1,3 +1,0 @@
-EXTRA_CFLAGS=-g -Wunused-variable
-
-obj-m        = parallel.o

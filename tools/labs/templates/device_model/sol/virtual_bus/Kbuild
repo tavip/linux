@@ -1,3 +1,0 @@
-EXTRA_CFLAGS=-g
-
-obj-y        = mydriver/ mybus/

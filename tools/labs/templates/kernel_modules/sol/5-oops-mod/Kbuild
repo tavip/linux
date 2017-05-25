@@ -1,3 +1,0 @@
-EXTRA_CFLAGS = -g
-
-obj-m = oops_mod.o

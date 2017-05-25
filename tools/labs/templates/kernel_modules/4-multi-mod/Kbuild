@@ -1,0 +1,3 @@
+# TODO/2: add rules to create a multi object module
+obj-m   = multi-mod.o
+multi-mod-y =  mod1.o mod2.o
