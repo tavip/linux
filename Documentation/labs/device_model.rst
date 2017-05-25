@@ -800,3 +800,258 @@ removeof the structure pnp_driver :
 As can be seen, the detection device disposal system will call the function 
 remove the driver will generate a call in user space, which can be detected 
 udevand dispose entries sysfs.
+
+Exercises
+=========
+
+0. Intro
+---------
+
+Find the definitions of the following symbols in the Linux kernel:
+
+   * dev_name, dev_set_name .
+   * pnp_device_probe, pnp_bus_match , pnp_register_driver and pnp_bus_type
+
+In solving this exercise you will meet:
+
+    * my_bus_type (mybus.c): global variable for the bus type
+    * my_bus_device (mybus.c): global variable for the bus device
+    * my_device (virtual_bus.h): structure used for devices connecting to the bus
+    * my_driver (virtual_bus.h): structure used for the driver that works with
+      the devices that connect to the bus
+    * dev_data (mydriver.c): global variable that maintains the driver's data
+
+1. Bus implementation
+---------------------
+
+Enter the virtual_bus/mybus , where you will find the implementation of a mybus
+bus as described in the lab. Analyze the contents of the mybus/mybus.c and
+include/virtual_bus.h . Notice that a bus_type structure , representing the bus
+type, and a device structure, representing the actual bus device , is registered
+when the module is loaded.
+
+Compile and load the module. Verify that the bus type appears in ``/sys/bus``,
+and the device in ``/sys/devices``. Remove the module and notice that the sysfs
+entries are removed.
+
+Modify the source so that the bus entries and the associated device are 
+``virtualbus`` or ``virtualbus0``.
+
+Re-read the Bus and Devices sections.
+
+For verification, the virtual machine must be created in /sys for the bus ( 
+virtualbus ) and parent ( virtualbus0 ):
+
+.. code-block:: bash
+
+# ls /sys/bus/virtualbus/
+# ls /sys/devices/virtualbus0/
+
+2. Connecting the driver to the bus
+----------------------------------------
+
+Go to the virtual_bus virtual_bus/mydriver , where you find the implementation 
+of a character-type device driver.
+
+Change the source so it complies with the Linux Device Model. The ``echo`` device
+will connect to the virtual bus from the previous exercise, with an echo driver
+associated with it. The driver and device name must be the same.
+
+Follow the TODO 2 comments from the code and the device / driver recording
+examples from the lab: device registration, driver registration.
+
+To connect to the virtualbus bus, you will need to use the features and 
+types of driver/device exported by it.
+
+In the ``my_device_data struct`` add a struct my_device_data type
+field (data type defined in include/virtual_bus.h ). The fields of the
+my_device my_device will be initialized in the my_init function.
+
+Define a my_driver structure struct my_driver and initialize the module and
+driver name for it. Register the driver in my_init.
+
+.. note:: Go to the Drivers section of the lab. Follow the code examples.
+
+.. note:: You need to register / deregister my_device and struct my_device struct 
+          my_driver in the init / exit function of the module. Use my_register_driver / 
+          my_unregister_driver , respectively my_register_device / my_unregister_device , 
+          defined in the mybus.c file.
+
+.. note:: To send the first argument (bus) to bus_find_device use a phrase like 
+          mydriver.driver.bus.
+
+Under my_init, initialize your device and record it. At least the name and
+driver fields must be filled in.
+
+You can also store a back pointer to the struct my_device_data in the 
+dev->p->driver_data . This field is useful for my_device_data private data ( 
+my_device_data ) of your device and where you only have access to the struct 
+structure generic structure. As a field in the device's private data , to 
+access the dev->p->driver_data it is recommended that you use the 
+dev_set_drvdata, dev_get_drvdata (interface) functions .
+
+..note:: Go to the Lab Devices section. Follow the code examples.
+
+Compile the module and copy it to the virtual machine along with the module 
+from the previous exercise.
+
+To remove the warnings related to undefined device registration / 
+deregistration, compile both modules from the parent directory. Be sure to 
+insert the module from the previous step ( mybus.ko ) before inserting the 
+current module.
+
+For testing, track the device ( echo ) and driver ( echo ) entries in /sys on 
+the virtual machine:
+
+
+# ls /sys/bus/virtualbus/devices/
+# ls /sys/bus/virtualbus/drivers/
+# ls /sys/devices/virtualbus0/
+
+2.1. Information devices on the bus
+-----------------------------------
+
+At the end of initiating the mydriver mydriver (TODO 2.1), verify that the
+device has been attached to the bus. Starting from the associated bus, iterate
+through the attached devices and search for the one with the echo name. Show
+the device name if it has been found.
+
+To search for a device, use bus_find_device_by_name . Send NULL as the second 
+argument of the function.
+
+Obtain the bus structure ( struct bus_type ) through a construct of 
+my_driver.driver.bus.
+
+The device name returned by the bus_find_device_by_name function can be 
+obtained with the dev_name function.
+
+For verification, inserting a module will display a message with the device 
+name.
+
+3. Attributes device drivers
+----------------------------
+
+Expand the echo driver from the previous exercise by adding a myattr for the
+created device that will contain the major and minor of the device (major:minor).
+This attribute will be displayed through the sysfs interface in the echo device directory.
+
+Follow the TODO 3 comments in the code.
+
+You will need to declare and register a device_attribute structure . You can 
+use the DEVICE_ATTR macro to create a structure with the name dev_attr_##_name 
+, where ##_name is the name of the attribute. To use the macro you will need to 
+specify in this order:
+
+    * Attribute name
+    * Permissions to access the sysfs entry associated with the attribute; Use 
+      the value 0444.
+    * A show function that displays the value of the attribute based on the
+      structure device information.
+    * A store function, which in your case can be NULL .
+
+In the show function, you can use the MAJOR and MINOR macrodefines to find the
+minor and the minor. These functions receive as argument the dev field of the 
+cdev struct cdev . struct cdev can find the cdev structure field in 
+my_device_data struct my_device_data . To get the my_device_data struct 
+my_device_data , when you know the address of a struct device , you can use the 
+dev_get_drvdata function.
+
+Please keep adding / removing the attribute when initiating / disabling the 
+module with the device_create_file , device_remove_file .
+
+Go to the Label Bags and Devices sections.
+
+For testing, run the command:
+
+  # # cat /sys/devices/virtualbus0/echo/myattr
+
+This command will cause my_show to run.
+
+4. Connection to the PNP bus
+----------------------------
+
+Enter the parallel directory, where you find implementing a simple port 
+parallel port driver. Analyze the contents of the parallel.c parallel.c . 
+Change the source so that it respects the Linux Device Model and plug and play 
+model. The device will connect to the PNP bus.
+
+Record / deregister the pnp_driver structure when loading / unloading the 
+module using pnp_register_driver or pnp_unregister_driver .
+
+In order to be a plug and play driver, devices must be initialized when they 
+appear in the system (when parallel_pnp_probe the parallel_pnp_probe function), 
+and logging out when they disappear from the system (when parallel_pnp_remove 
+the parallel_pnp_remove function).
+
+Re-read the PNP Magazine sections and plug and play operations in the lab.
+
+To register and deregister a device, use the register_parallel_dev 
+register_parallel_dev unregister_parallel_dev unregister_parallel_dev defined 
+within the lab code skeleton.
+
+For verification, look at the content in the related directory in sysfs:
+
+  #  ls /sys/bus/pnp/drivers/parallel
+
+5. Classes
+----------
+
+Starting from the previous module, add the information for a new class parclass 
+to which the paralel module belongs.
+
+Define a class structure and a device structure.
+
+The class structure must be initialized with the driver's resources (when 
+parallel_init the parallel_init function) and removed at the output of the 
+driver ( parallel_exit ). You will need to use the class_register and 
+class_unregister functions .
+
+In addition, each device must be initialized with a device structure and 
+recorded with device_create (when parallel_pnp_probe the parallel_pnp_probe 
+function). When calling the device_create function, use the &dev->dev for the 
+fourth parameter. It is the struct structure field of the struct structure 
+pnp_dev .
+
+When removing the device (in the parallel_pnp_remove function), use 
+device_destroy .
+
+Read the lab sections.
+
+For verification, look at the contents of the related directory in sysfs:
+
+  # # ls /sys/class/parclass/
+
+
+6. USB Hotplug
+--------------
+
+In the usb_extra usb_extra find a minimal implementation of a USB driver.
+Analyze the usb.c source and observe the implementation of the Hotplug
+mechanism and the connection to the USB . Notice the similarities with the
+interface between the PNP bus studied in the lab and the associated drivers:
+struct usb_driver / struct pnp_driver , implementation of the probe function (
+skel_probe ), table skel_table which initializes the id_table field to identify 
+compatible devices, etc.
+
+Connect a USB device to your physical machine. Call dmesg or lsusb to identify 
+the vendorId and productId attached device.
+
+  Usb 3 - 2 : New USB device found, idVendor = 1e3d, idProduct = 6025 
+
+Change the code in usb.c to create a compatible driver with your device. 
+Compile the module and paste it into the physical machine (or a virtual machine 
+with udev and access to the host's USB). Reconnect the USB device. What do you 
+notice when running the dmesg command?
+
+The most likely device will be taken over by another usb driver in the system 
+(ex usb_storage). In this case, you can temporarily download the competing 
+module (rmmod usb_storage). If the device connects to the usb.ko usb.ko , you 
+can see the message "USB Skeleton device now attached to USBSkel-0", a message 
+skel_probe by the skel_probe function.
+
+Download the module. Create a udev rule that identifies the device (after 
+ATTRS{idVendor} and ATTRS{idProduct} ) to load the usb.ko driver. Read the 
+Hotplug section of the lab. With the downloaded module, reconnect the USB 
+device. What do you notice when running dmesg and lsmod commands? 
+
+
