@@ -1,7 +1,3 @@
-/*
- * SO2 lab-02 - task 7 - list_proc.c
- */
-
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>

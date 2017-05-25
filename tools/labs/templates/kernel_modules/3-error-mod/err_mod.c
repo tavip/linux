@@ -1,14 +1,10 @@
-/*
- * SO2 lab-02 - task 3 - err_mod.c
- */
-
 #include <linux/init.h>
 #include <linux/kernel.h>
 /* TODO: add missing kernel headers */
 #include <linux/module.h>
 
 MODULE_DESCRIPTION("Error module");
-MODULE_AUTHOR("So2rul Esforever");
+MODULE_AUTHOR("Kernel Hacker");
 MODULE_LICENSE("GPL");
 
 static int n1, n2;

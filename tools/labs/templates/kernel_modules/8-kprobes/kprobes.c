@@ -1,7 +1,3 @@
-/*
- * Task 8: Using kprobes (jprobes and kretprobes)
- */
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>

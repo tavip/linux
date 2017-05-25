@@ -1,7 +1,3 @@
-/*
- * SO2 lab-02 - task 1 & 2 - hello_mod.c
- */
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
