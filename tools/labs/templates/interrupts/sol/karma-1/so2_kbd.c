@@ -9,7 +9,7 @@
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <asm/io.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>

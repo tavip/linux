@@ -7,7 +7,7 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/list.h>
-#include <linux/sched.h>
+#include <linux/sched/signal.h>
 
 MODULE_DESCRIPTION("Use list to process task info");
 MODULE_AUTHOR("SO2");

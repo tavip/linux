@@ -8,7 +8,7 @@
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include "../include/virtual_bus.h"
 
 #define MY_MAJOR	42

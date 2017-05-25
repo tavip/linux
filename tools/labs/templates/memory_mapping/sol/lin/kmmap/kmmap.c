@@ -12,7 +12,7 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <asm/pgtable.h>
-#include <linux/mm.h>
+#include <linux/sched/mm.h>
 #include <linux/sched.h>
 #include <asm/io.h>
 #include <asm/highmem.h>

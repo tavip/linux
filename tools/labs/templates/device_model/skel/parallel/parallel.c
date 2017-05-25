@@ -9,7 +9,7 @@
 #include <linux/interrupt.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
-#include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #include <asm/io.h>
 #include <linux/pnp.h>
 

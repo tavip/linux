@@ -63,7 +63,7 @@ static int my_write(struct file *file, const char __user *user_buffer, size_t si
     return sizeWritten;
 }
 
-static int my_ioctl (struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg) {
+static long my_ioctl (struct file *file, unsigned int cmd, unsigned long arg) {
     struct my_device_data *my_data =
          (struct my_device_data*) file->private_data;
 	/* my_ioctl_data mid; */
@@ -89,7 +89,7 @@ struct file_operations my_fops = {
     .read = my_read,
     .write = my_write,
     .release = my_close,
-    .ioctl = my_ioctl
+    .unlocked_ioctl = my_ioctl
 };
 
 int init_module(void) {
