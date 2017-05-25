@@ -17,6 +17,10 @@ driver topics. For each topic there are two parts:
 
    vm.rst
    skel.rst
+   kernel_modules.rst
+   kernel_api1.rst
+   device_drivers.rst
    interrupts.rst
    deferred_work.rst
    memory_mapping.rst
+   device_model.rst
