@@ -16,6 +16,16 @@ skels/Kbuild:
 build: $(KCONFIG) skels/Kbuild
 	$(MAKE) -C $(KDIR) M=$(PWD)/skels ARCH=$(ARCH) modules
 
+TEMPDIR := $(shell mktemp -u)
+
+copy:
+	if  [ -e qemu.mon ]; then exit 1; fi
+	mkdir $(TEMPDIR)
+	sudo mount -t ext4 -o loop $(YOCTO_IMAGE) $(TEMPDIR)
+	find skels -type f \( -name *.ko -or -executable \) | xargs sudo cp --parents -vt $(TEMPDIR)/home/root || true
+	sudo umount $(YOCTO_IMAGE)
+	rmdir $(TEMPDIR)
+
 docs:
 	$(MAKE) -C $(KDIR) DOCBOOKS= SPHINXDIRS=labs htmldocs
 
