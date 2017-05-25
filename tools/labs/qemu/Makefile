@@ -38,6 +38,9 @@ rootfs.img: $(YOCTO_IMAGE) zImage
 	rmdir $(TEMPDIR)
 	ln -f $(YOCTO_IMAGE) rootfs.img
 
+gdb: vmlinux
+	gdb -ex "target remote localhost:1234" vmlinux
+
 vmlinux: zImage
 	ln -fs $(KDIR)/vmlinux vmlinux
 
