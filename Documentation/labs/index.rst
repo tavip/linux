@@ -16,7 +16,7 @@ driver topics. For each topic there are two parts:
 .. toctree::
 
    vm.rst
-   skel.rst
+   exercises.rst
    kernel_modules.rst
    kernel_api1.rst
    device_drivers.rst
