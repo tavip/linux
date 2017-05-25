@@ -452,251 +452,563 @@ A problem that occurs when implementing the ``open`` function is access control.
 Sometimes a device needs to be opened once at a time; More specifically, do not 
 allow the second open before the release . To implement this restriction, you 
 choose a way to handle an open call for an already open device: it can return 
-an error ( -EBUSY ), block open calls until a release operation, or shut down 
-the device before Do the open .
+an error (``-EBUSY``), block open calls until a release operation, or shut down
+the device before do the open .
 
-At the user-space call of the open and close functions on the device, call 
+At the user-space call of the open and close functions on the device, call
 my_open and my_release in the driver. An example of a user-space call:
 
-  Int fd = open ( "/ dev / my_device" ; O_RDONLY ) ;
-     If ( fd < 0 ) {
-         / * Handle error * /
-     }
+.. code-block:: c
 
-     / * To work * /
-     // ..
+    int fd = open("/dev/my_device", O_RDONLY);
+    if (fd < 0) {
+        /* handle error */
+    }
+ 
+    /* do work */
+    //..
+ 
+    close(fd);
 
-     Close ( fd ) ; 
+.. **
 
 Read and write
+--------------
 
-The read and write functions transfer data between the device and the 
-user-space: the read function reads the data from the device and transfers it 
-to the user-space, while writing reads the user-space data and writes it to the 
-device. The buffer received as a parameter is a user-space pointer, which is 
-why it is necessary to use the copy_to_user or copy_from_user functions .
+The read and write functions transfer data between the device and the
+user-space: the read function reads the data from the device and transfers it
+to the user-space, while writing reads the user-space data and writes it to the
+device. The buffer received as a parameter is a user-space pointer, which is
+why it is necessary to use the copy_to_user or copy_from_user functions.
 
-The value read or write can be:
+The value returned by read or write can be:
 
-    The number of bytes transferred; If the inverse value is less than the size 
-parameter (the number of bytes requested), then it means that a partial 
-transfer was made. Most of the time, the user-space app recalls the system call 
-(read or write) function until the required data number is transferred.
-    0 to mark the end of the file in the case of read ; If write returns the 
-value 0 then it means that no byte has been written and that no error has 
-occurred; In this case, the user-space application re-writes most of the time.
-    A negative value indicating an error code, 
+  * the number of bytes transferred; if the returned value is less than the size
+    parameter (the number of bytes requested), then it means that a partial
+    transfer was made. Most of the time, the user-space app calls the system call
+    (read or write) function until the required data number is transferred.
+  * 0 to mark the end of the file in the case of read ; if write returns the
+    value 0 then it means that no byte has been written and that no error has
+    occurred; In this case, the user-space application retries the write call.
+  * a negative value indicating an error code.
 
-To perform a data transfer consisting of several partial transfers, the 
+To perform a data transfer consisting of several partial transfers, the
 following operations should be performed:
 
-    Transfer the maximum number of possible bytes between the buffer received 
-as a parameter and the device (writing to the device / reading from the device 
-will be done from the offset received as a parameter);
-    Update the offset received as a parameter to the position from which the 
-next read / write data will begin;
-    Returns the number of bytes transferred. 
+  * transfer the maximum number of possible bytes between the buffer received
+    as a parameter and the device (writing to the device/reading from the device
+    will be done from the offset received as a parameter);
+  * update the offset received as a parameter to the position from which the
+    next read / write data will begin;
+  * returns the number of bytes transferred.
 
 The sequence below shows a simple example of the read function. The call does 
 not update the offset field so it will always return the message at the 
 beginning of the buffer. A correct implementation must take account of the 
 offset parameter and update it after reading.
 
-  Static int my_read ( struct file * file , char __user * user_buffer , 
-                                 Size_t size , loff_t * offset )
- {
-     Struct my_device_data * my_data =
-              ( Struct my_device_data * ) file -> private_data ;
+.. code-block:: c
 
-     / * Read data from device in my_data-> buffer * /
-     If ( copy_to_user ( user_buffer , my_data -> buffer , my_data -> size ) )
-         Return - EFAULT ;
+   static int my_read(struct file *file, char __user *user_buffer, 
+                                   size_t size, loff_t *offset)
+   {
+       struct my_device_data *my_data =
+                (struct my_device_data *) file->private_data;
+    
+       /* read data from device in my_data->buffer */
+       if(copy_to_user(user_buffer, my_data->buffer, my_data->size))
+           return -EFAULT;
+    
+       return my_data->size;
+   }
 
-     Return my_data -> size ;
- } 
 
-The structure of the write function is similar: reads user-space data using the 
+The structure of the write function is similar: reads user-space data using the
 copy_from_user function and writes them to the device.
 
-  Static int my_write ( struct file * file , const char __user * user_buffer , 
-                                              Size_t size , loff_t * offset )
- {
-     // write data from user buffer to kernel buffer
-     // update file offset in userspace
-     // ..
+.. code-block:: c
 
- } 
+   static int my_write(struct file *file, const char __user *user_buffer,
+                                                size_t size, loff_t * offset)
+   {
+       // write data from user buffer into kernel buffer
+       // update file offset in userspace
+       // ..
+    
+   }
 
-When calling the user-space read and write functions (using an open call file 
-my_read ), the my_read and my_write in the driver will be called. An example of 
+When calling the user-space read and write functions (using an open call file
+my_read ), the my_read and my_write in the driver will be called. An example of
 a user-space code:
 
-  If ( read ( fd , buffer , size ) < 0 ) {
-         / * Handle error * /
-     }
+.. code-block:: c
 
-     If ( write ( fd , buffer , size ) < 0 ) {
-         / * Handle error * /
-     } 
+    if (read(fd, buffer, size) < 0) {
+        /* handle error */
+    }
+ 
+    if (write(fd, buffer, size) < 0) {
+        /* handle error */
+    }
 
-The images below illustrate read and write operations and how data is 
-transferred between the userspace and the driver. In the first two images we 
-can see two situations for the read :
+The images below illustrate read and write operations and how data is
+transferred between the userspace and the driver. In the first two images we
+can see two situations for the read:
 
-    When the driver has enough data available (starting with the OFFSET 
-position) to accurately transfer the required size (SIZE) to the user.
-    When a smaller amount is transferred than required. 
+   1. when the driver has enough data available (starting with the OFFSET
+      position) to accurately transfer the required size (SIZE) to the user.
+   2. when a smaller amount is transferred than required.
 
-We can look at the read operation implemented by the driver as a response to a 
-userpace read request. In this case, the driver is responsible for advancing 
-the offset according to how much it reads and returning the read size (which 
+We can look at the read operation implemented by the driver as a response to a
+userpace read request. In this case, the driver is responsible for advancing
+the offset according to how much it reads and returning the read size (which
 may be less than what is required).
 
 In parallel, the write operation will respond to a write request from userspace 
 (the last two images). In this case, depending on the maximum driver capacity 
 (MAXSIZ), you can write more or less than the required size.
 
-read read less
-
-write write less
 ioctl
+-----
 
-In addition to read and write operations, a driver needs the ability to perform 
-certain physical device control tasks. These operations are accomplished by 
-implementing a ioctl function. Initially, the ioctl system call used Big Kernel 
-Lock. That's why the call was gradually replaced with its unlocked version 
+In addition to read and write operations, a driver needs the ability to perform
+certain physical device control tasks. These operations are accomplished by
+implementing a ioctl function. Initially, the ioctl system call used Big Kernel
+Lock. That's why the call was gradually replaced with its unlocked version
 called unlocked_ioctl . You can read more on LWN: 
 http://lwn.net/Articles/119652/
 
-  Static long my_ioctl ( struct file * file , unsigned int cmd , unsigned long 
-arg ) ; 
+.. code-block:: c
 
-Cmd is the command sent from user-space. If a whole is being sent to the 
-user-space call, it can be accessed directly. If a buffer is fetched, the arg 
-value will be a pointer to it, and must be accessed through the copy_to_user or 
-copy_from_user .
+  static long my_ioctl (struct file *file, unsigned int cmd, unsigned long arg);
+
+cmd is the command sent from user-space. If a whole is being sent to the
+user-space call, it can be accessed directly. If a buffer is fetched, the arg
+value will be a pointer to it, and must be accessed through the copy_to_user or
+copy_from_user.
 
 Before implementing the ioctl function, the numbers corresponding to the 
-commands must be chosen. One method is to choose consecutive numbers starting 
-at 0, but it is recommended to use _IOC(dir, type, nr, size) macrodefinition 6) 
+commands must be chosen. One method is to choose consecutive numbers starting
+at 0, but it is recommended to use ``_IOC(dir, type, nr, size)`` macrodefinition
 to generate ioctl codes. The macrodefinition parameters are as follows:
 
-    Dir represents the data transfer _IOC_NONE ( _IOC_NONE , _IOC_READ , 
-_IOC_WRITE ) 7) ;
-    type represents the magic number ( Documentation / ioctl-number.txt );
-    nr is the ioctl code for the device;
-    size is the size transferred data. 
+   * ``dir`` represents the data transfer (``_IOC_NONE`` , ``_IOC_READ``,
+     ``_IOC_WRITE``.
+   * ``type`` represents the magic number (Documentation/ioctl-number.txt);
+   * ``nr`` is the ioctl code for the device;
+   * ``size`` is the size transferred data.
 
 The following example shows an implementation for a ioctl function:
 
-  #include <asm / ioctl.h>
+.. code-block:: c
 
- #define MY_IOCTL_IN _IOC (_IOC_WRITE, 'k', 1, sizeof (my_ioctl_data))
-
- Static long my_ioctl ( struct file * file , unsigned int cmd , unsigned long 
-arg )
- {
-     Struct my_device_data * my_data =
-          ( Struct my_device_data * ) file -> private_data ;
-     My_ioctl_data mid ;
-
-     Switch ( cmd ) {
-     Cases MY_IOCTL_IN :
-         If ( copy_from_user ( & mid , ( my_ioctl_data * ) arg , 
-                            Sizeof ( my_ioctl_data ) ) )
-             Return - EFAULT ;
-
-         / * Process data and execute command * /
-
-         Break ;
-     Default :
-         Return - ENOTTY ;
-     }
-
-     Return 0 ;
- } 
-
-8)
+   #include <asm/ioctl.h>
+    
+   #define MY_IOCTL_IN _IOC(_IOC_WRITE, 'k', 1, sizeof(my_ioctl_data))
+    
+   static long my_ioctl (struct file *file, unsigned int cmd, unsigned long arg)
+   {
+       struct my_device_data *my_data =
+            (struct my_device_data*) file->private_data;
+       my_ioctl_data mid;
+    
+       switch(cmd) {
+       case MY_IOCTL_IN:
+           if( copy_from_user(&mid, (my_ioctl_data *) arg, 
+                              sizeof(my_ioctl_data)) )
+               return -EFAULT;
+    
+           /* process data and execute command */
+    
+           break;
+       default:
+           return -ENOTTY;
+       }
+    
+       return 0;
+   }
 
 At the user-space call for the ioctl function, the my_ioctl function of the 
 driver will be called. An example of such a user-space call:
 
-  If ( ioctl ( fd , MY_IOCTL_IN , buffer ) < 0 ) {
-         / * Handle error * /
-     } 
+.. code-block:: c
+   
+    if (ioctl(fd, MY_IOCTL_IN, buffer) < 0) {
+        /* handle error */
+    }
 
-9)
 Synchronization - waiting queues
+--------------------------------
 
-Queue queues are useful mechanisms for synchronization issues. It is often 
-necessary for a thread to wait for an operation to finish, but it is desirable 
-that this wait is not busy-waiting. Using queuing queues and functions that 
-change the state of the thread from a non-planable plan to the opposite can 
-solve such problems. In Linux, a queue is a list of processes that are waiting 
-for a specific event. A queue is defined with the wait_queue_head_t type and 
-can be used by the functions / macros:
+Wait queues are useful mechanisms for synchronization issues. It is often
+necessary for a thread to wait for an operation to finish, but it is desirable
+that this wait is not busy-waiting. Using waiting queues and functions that
+change the state of the thread from a non-planable plan to the opposite can
+solve such problems. In Linux, a queue is a list of processes that are waiting
+for a specific event. A queue is defined with the ``wait_queue_head_t`` type and
+can be used by the functions/macros:
 
-  #include <linux / wait.h>
-
- DECLARE_WAIT_QUEUE_HEAD ( wq_name ) ;
-
- Void init_waitqueue_head ( wait_queue_head_t * q ) ;
-
- Int wait_event ( wait_queue_head_t q , int state ) ;
-
- Int wait_event_interruptible ( wait_queue_head_t q , int condition ) ;
-
- Int wait_event_timeout ( wait_queue_head_t q , int condition , int timeout ) ;
-
- Int wait_event_interruptible_timeout ( wait_queue_head_t q , int condition , 
-int timeout ) ;
-
- Void wake_up ( wait_queue_head_t * q ) ;
-
- Void wake_up_interruptible ( wait_queue_head_t * q ) ; 
+.. code-block:: c
+   
+   #include <linux/wait.h>
+    
+   DECLARE_WAIT_QUEUE_HEAD(wq_name);
+    
+   void init_waitqueue_head(wait_queue_head_t *q);
+    
+   int wait_event(wait_queue_head_t q, int condition);
+    
+   int wait_event_interruptible(wait_queue_head_t q, int condition);
+    
+   int wait_event_timeout(wait_queue_head_t q, int condition, int timeout);
+    
+   int wait_event_interruptible_timeout(wait_queue_head_t q, int condition, int timeout);
+    
+   void wake_up(wait_queue_head_t *q);
+    
+   void wake_up_interruptible(wait_queue_head_t *q);
 
 The roles of the macros / functions above are:
 
-    Init_waitqueue_head initializes the queue; If you want to initialize the 
-queue to compile, you can use the DECLARE_WAIT_QUEUE_HEAD macro; 
+   * ``init_waitqueue_head`` initializes the queue; if you want to initialize the
+     queue to compile, you can use the ``DECLARE_WAIT_QUEUE_HEAD`` macro;
 
-    Wait_event and wait_event_interruptible adds the current thread to the 
-queue while the condition is false, sets it to TASK_UNINTERRUPTIBLE or 
-TASK_INTERRUPTIBLE and calls the scheduler to schedule a new thread; Waiting 
-will be interrupted when another thread will call the wake_up function; 
+   * ``wait_event`` and ``wait_event_interruptible`` adds the current thread to the
+     queue while the condition is false, sets it to TASK_UNINTERRUPTIBLE or
+     TASK_INTERRUPTIBLE and calls the scheduler to schedule a new thread; Waiting
+     will be interrupted when another thread will call the wake_up function; 
+   * ``wait_event_timeout`` and ``wait_event_interruptible``_timeout have the same
+     effect as the above functions, only waiting can be interrupted at the end of 
+     the timeout received as a parameter;
 
-    Wait_event_timeout and wait_event_interruptible_timeout have the same 
-effect as the above functions, only waiting can be interrupted at the end of 
-the timeout received as a parameter; 
+   * ``wake_up`` puts all threads off from state TASK_INTERRUPTIBLE and
+     TASK_UNINTERRUPTIBLE in TASK_RUNNING status; Remove these threads from the
+     queue;
 
-    Wake_up puts all threads off from state TASK_INTERRUPTIBLE and 
-TASK_UNINTERRUPTIBLE in TASK_RUNNING status; Remove these threads from the 
-queue; 
+   * ``wake_up_interruptible`` same action, but only threads with TASK_INTERRUPTIBLE
+     status are TASK_INTERRUPTIBLE . 
 
-    Wake_up_interruptible same action, but only threads with TASK_INTERRUPTIBLE 
-status are TASK_INTERRUPTIBLE . 
-
-A simple example is that of a thread waiting to change the value of a flag. The 
+A simple example is that of a thread waiting to change the value of a flag. The
 initializations are done by the sequence:
 
-  #include <linux / sched.h>
+.. code-block:: c
 
-     Wait_queue_head_t wq ;
-     Int flag = 0 ;
-
-     Init_waitqueue_head ( & wq ) ; 
+   #include <linux/sched.h>
+ 
+    wait_queue_head_t wq;
+    int flag = 0;
+ 
+    init_waitqueue_head(&wq);
 
 A thread will wait for the flag to be changed to a value other than zero:
 
-  Wait_event_interruptible ( wq , flag ! = 0 ) ;
-     Flag = 0 ; 
+.. code-block:: c
+
+   wait_event_interruptible(wq, flag !=0);
+   flag = 0;
 
 While another thread will change the flag value and wake up the waiting threads:
 
-  Flag = 1 ;
-     Wake_up_interruptible ( & wq ) ; 
+.. code-block:: c
+
+   flag = 1 ;
+   wake_up_interruptible (&wq);
 
 
+Exercises
+---------
+
+To run the lab, we start from the laboratory 's task archive . We download and
+decompress the archive into the so2/ directory of the student's home
+directory on the base system:
+
+Within the lab04 lab04-tasks/ directory, resources are available to develop the 
+exercises below: source code skeleton files, Makefile and Kbuild files,
+scripts, and test programs.
+
+We will develop exercises on the base system and then test them on the QEMU
+virtual machine . After editing and compiling a kernel module,
+we will copy it to the dedicated QEMU virtual machine directory using a form 
+command:
+
+.. code-block:: c
+
+student@asgard:~/so2$ cp /path/to/module.ko ~/so2/qemu-so2/fsimg/root/modules/
+
+Where /path/to/module.ko is the path to the object file for the kernel module. 
+Then we will start from the ~/so2/qemu-so2/ , the QEMU virtual machine using 
+the command
+
+.. code-block:: c
+
+   student@asgard:~/so2/qemu-so2$ make
+
+After starting the QEMU virtual machine, we will be able to use commands in the 
+QEMU window to load and download the kernel module:
+
+.. code-block:: c
+
+# insmod modules/module-name.ko
+# rmmod module/module-name
+
+Where module-name is the name of the kernel module.
+
+For laboratory development, it is recommended to use three terminals or, 
+better, three terminal tabs. To open a new terminal tab, use the Ctrl+Shift+t 
+key combination. The three terminal tabs fulfill the following roles:
+
+    At the first tab we develop the kernel module: editing, compiling, copying 
+to the dedicated QEMU virtual machine directory. We work in the resulting 
+directory resulting from the decompression of the laboratory's task archive.
+    On the second tab, we start the QEMU virtual machine and then test the 
+kernel module: load / unload mode, run tests. We work in the directory of the 
+virtual machine: ~/so2/qemu-so2/ .
+    On the third tab we start the minicom or UDP server to receive the 
+netconsole messages . It does not matter in which director we are. We use the 
+command
 
 
+    To create a kernel module, use the resources in the kernel/ directory 
+kernel/ .
+    To create a test module, use the resources in the user/ directory.
+    Tasks will be resolved by completing the kernel/so2_cdev.c with new 
+features.
+    Watch the contents of the kernel/so2_cdev.c so2_cdev.c file and use the 
+defined macros.
+    Read carefully all the details of an exercise before you begin solving it. 
 
+Intro
+-----
+
+Identify, using cscope or LXR , the definitions of the following symbols:
+
+    * ``struct file``
+    * ``struct file_operations``
+    * ``generic_ro_fops``
+    * ``vfs_read, ``new_sync_red``and ``generic_file_read_iter``.
+
+Follow the definition of the ``vfs_read`` function. Notice that for a device that
+does not have the read function or the ``read_iter`` function will call
+``new_sync_read`` . This function uses ``read_iter`` which by default is defined at
+``generic_file_read_iter``.
+
+Register a device of character type
+---------------------------------
+The driver will control a single device with the MY_MAJOR major and minor
+MY_MINOR (the macros defined in the kernel/so2_cdev.c file).
+As a first step, you will need to create the /dev/so2_cdev character
+/dev/so2_cdev using the mknod utility.
+
+.. attention:: Read the Major and Minor ID in the lab. To avoid using mknod every machine boot,
+   add the mknod command with the relevant parameters at the end of the qemu-vm/fsimg/etc/rcS .
+
+Implement the registration and deregistration of the device with the name
+so2_cdev , respectively in the init and exit module functions. Remember
+that the driver controls a single device. In this exercise you do not need to
+use the cdev_init and cdev_add. You will use them in the next exercise.
+
+.. attention:: Read the section  registering lab character devices in the lab.
+
+Display, using pr_info, a message after the recording and registration operations to confirm that they were successful. Then load the module into the kernel:
+
+.. code-block:: bash
+
+ $ insmod so2_cdev.ko 
+
+And see character devices in ``/proc/devices``:
+
+.. code-block:: bash
+
+ $ cat /proc/devices | less
+
+Identify the device type recorded after major 42 . Note that device types (ie 
+major) and actual devices (i.e. minors) appear in /proc/devices.
+
+.. note:: Entries to /dev are not created by inserting the module. These can be created 
+   in two ways: Manually, using the mknod command as we will do in the following exercises.
+   Automatically using udev daemon; We will not insist on this in SO2 laboratories 
+
+Unload the kernel module:
+
+.. code-block:: bash
+
+  $ rmmod so2_cdev
+
+Register an already assigned device
+-----------------------------------
+
+Modify the kernel module to try recording a previously assigned device. See LXR 
+to identify the error returned by module registration.
+
+Return to the initial configuration of the module.
+
+See ``/proc/devices`` to get an already assigned device.
+
+Implementing device opening and closing
+---------------------------------------
+
+Run the ``cat`` command over the created character device (/dev/so2_cdev).
+Reading does not work because the driver does not have the file opening,
+reading, and closing functions implemented.
+
+   1. Initialize your device
+      - Read the section Recording and registering lab character devices in the lab
+      - First, add a cdev struct field to your struct cdev.
+   2. Implement the open and release in the driver.
+   3. Display a message in the open and release
+   4. Run the ``cat`` command on the device after inserting the module. Follow the 
+      messages displayed by the kernel after running the cat command. You receive the 
+      error message because the driver does not implement the reading function in the 
+      file. 
+
+.. info:: The prototype of a device driver's operations is in the file_operations 
+          structure. Go to the open and release section.
+
+Access restriction
+------------------
+
+Restrict access to the device with atomic variables, so that a single process
+can open the device at a time. The rest will receive the "device busy" error
+("-EBUSY"). Restricting access will be done in the open function displayed by 
+the driver.
+
+   1. Add an atomic_t atomic_t to the device structure.
+   2. Initialize the variable at device initialization.
+   3. Use the variable in the open function to restrict access to the device. We
+      recommend using atomic_cmpxchg.
+   4. Reset the variable in the release function to retrieve access to the device.
+   5. To test your deployment, you'll need to simulate a long-term use of your 
+      device. Call the scheduler at the end of the device opening:
+.. code-block:: c
+
+      set_current_state(TASK_INTERRUPTIBLE);
+      schedule_timeout(1000);
+
+    6. Test using ``cat /dev/so2_cdev`` & ``cat /dev/so2_cdev``.
+
+.. info:: Before testing, the device /dev/so2_cdev must be created.
+
+.. info:: The advantage of the atomic_cmpxchg function is that it can check the
+          old value of the variable and set it up to a new value, all in one
+          atomic operation. More details about the function parameters can be found here .
+          An example of use is here .
+
+Read operation
+-----------------
+
+Implement the read function in the driver:
+
+   1. Keep a buffer in your device structure to initialize to the message from
+      the MESSAGE macro. Initializing this buffer will be done with device
+      initialization.
+   2. At a read call, copy the contents of the kernel space buffer into the user
+      space buffer.
+   3. Use the copy_to_user function to copy information from kernel space to 
+      user space.
+   4. Ignore the size and offset parameters at this time. You can assume that
+      the buffer in user space is large enough. You do not need to check the
+      validity of the size argument of the read function.
+   5. The value returned by the read call is the number of bytes transmitted 
+      from the kernel space buffer to the user space buffer.
+   6. After implementation, test using cat /dev/so2_cdev/
+
+.. info:: The cat /dev/so2_cdev of the cat /dev/so2_cdev does not end (use Ctrl+C ).
+          Read the read and write sections and Access to the address space of the lab 
+          process.
+          If you want to display the offset value use a construction of the form:
+          ``pr_info("Offset: %lld \n", *offset)``; It's important that the %lld lld display modifier           is a display for a long long int data type. The data type loff_t (used by offset )
+          is a typedef for long long int.
+
+The command ``cat`` reads to the end of the file, and the end of the file is
+signaled by returning the value 0 in the read. Thus, for a correct deployment,
+you will need to update and use the offset received as a parameter in the read
+function and return the value 0 when the user has reached the end of the buffer.
+
+Modify the driver so that the ``cat`` commands ends:
+
+    1. Use the size parameter.
+    2. For every reading, update the offset parameter accordingly.
+    3. Ensure that the read function returns the number of bytes that were copied
+       into the user buffer. 
+
+..info:: By dereferencing the offset parameter it is possible to read and move the current
+         position in the file. Its value needs to be updated every time a read is done 
+         successfully.
+
+Write operation
+---------------
+
+Add the ability to write a message to replace the predefined message. Implement 
+the write function in the driver.
+
+Ignore the offset parameter at a time. You can assume that the driver buffer is
+large enough. You do not need to check the validity of the write argument's 
+size argument.
+
+.. info:: The prototype of a device driver's operations is in the file_operations 
+          structure.
+          Test using commands:
+          .. code-block:: c
+             echo "arpeggio"> /dev/so2_cdev
+             cat /dev/so2_cdev
+         
+          Read the read and write sections and Access to the address space of the lab 
+          process.
+
+ioctl operation
+---------------
+
+For this exercise, we want to add the ioctl MY_IOCTL_PRINT to display the
+message from the IOCTL_MESSAGE macro in the driver.
+
+For this:
+
+   1. Implement the ioctl function in the driver.
+   2. You need to write a user-space program (user/so2_cdev_test.c) to call the
+      ioctl function with the appropriate parameters. In the test file you must call
+      ioctl for the device file.
+   3. Use printk to display the message in the driver. 
+
+.. info:: The macro definition MY_IOCTL_PRINT is defined in the include/so2_cdev.h file
+          in the include/so2_cdev.h task archive (uses _IOC to define the _IOC)
+          Read the ioctl and open and release sections in the lab.
+
+.. info:: To compile the user space source code use the gcc-5 . To do this, run the 
+command: ``/usr/bin/gcc-5 -m32 -static -Wall -g -o so2_cdev_test so2_cdev_test.c``.
+
+The executable result should be copied to the virtual machine just like the 
+kernel module and run it on the virtual machine to validate the correct ioctl 
+implementation.
+
+Extra
+-----
+Ioctl with messaging Add two ioctl operations to modify the
+message associated with the driver. Use fixed-length buffer ( BUFFER_SIZE ).
+
+   1. Add the ioctl function from the driver operations:
+      * MY_IOCTL_SET_BUFFER for writing a message to the device;
+      * MY_IOCTL_GET_BUFFER to read a message from your device.
+   2. Change the user-space program to allow for testing.
+
+.. info:: Read the ioctl sections and Access to the address space of the lab process.
+
+Ioctl with waiting queues
+-------------------------
+
+Add two ioctl to the device driver for queuing.
+
+    1. Add the ioctl function from the driver operations:
+       * MY_IOCTL_DOWN to add the process to a queue;
+       * MY_IOCTL_UP to remove the process from a queue. 
+    2. Fill the device structure with a wait_queue_head_t field and a 
+       wait_queue_head_t flag.
+    3. Do not forget to initialize the wait queue and flag.
+    4. Remove xclusive access condition from previous exercise
+    5. Change the user-space program to allow for testing. 
+
+When the process is added to the queue, it will remain blocked in execution; To
+run the queue command open a new console in the virtual machine with Alt+F2 ;
+You can return to the previous console with Alt+F1 . If you're connected via 
+SSH to the virtual machine, open a new console.
+
+.. info:: Read the ioctl and Synchronization sections - waiting queues in the lab.
