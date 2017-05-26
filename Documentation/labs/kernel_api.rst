@@ -1,6 +1,9 @@
 Kernel API
 ==========
 
+.. slideconf::
+   :theme: single-level
+
 Overview
 --------
 
