@@ -1,5 +1,5 @@
 ==========================
-I/O access and Interrupts 
+I/O access and Interrupts
 ==========================
 
 
@@ -15,10 +15,6 @@ Keywords: IRQ, I/O port, I/O address, base address, UART, request_region, releas
 Background information
 ======================
 
-
-Hardware access
----------------
-
 A peripheral device is controlled by writing and reading its
 registers. Often, a device has multiple registers that can be accessed
 at consecutive addresses either in the memory address space or in the
@@ -28,7 +24,6 @@ memory addresses so that the processor can communicate with the device
 through instructions that work directly with the memory. For
 simplicity we will directly use I/O ports (without mapping to physical
 memory addresses) to communicate with physical devices.
-
 
 The I/O ports of each device are structured into a set of specialized
 registers to provide a uniform programming interface. Thus, most
@@ -40,7 +35,7 @@ devices will have the following types of registers:
 * **Input** registers from which data is taken from the device
 * **Output** registers in which the data is written to transmit it to the
   device
-    
+
 Physical ports are differentiated by the number of bits: they can be
 8, 16 or 32-bit ports.
 
@@ -48,9 +43,6 @@ For example, the parallel port has 8 8-bit I/O ports starting at base
 address 0x378. The data log is found at base address (0x378), status
 register at base + 1 (0x379), and control at base address + 2
 (0x37a). The data log is both an entry and exit log.
-
-Interrupt handling
-------------------
 
 Although there are devices that can be fully controlled using I/O
 ports or special memory areas, there are situations where this is
@@ -70,9 +62,6 @@ are no longer needed. In addition, in some situations, device drivers
 must share an interrupt or synchronize with interrupts. All of these will be
 discussed further.
 
-Locking
--------
-
 When we need to access shared resources between an interrupt
 routine (A) and code running in process context or in bottom-half
 context (B), we must use a special synchronization technique. In (A)
@@ -90,23 +79,25 @@ deadlock in this case is:
    will go into an infinite loop
 
 
-Accessing the hardware in Linux
-===============================
+Accessing the hardware
+======================
 
 In Linux, the I/O ports access is implemented on all architectures and
 there are several APIs that can be used.
 
-Request access to I/O ports 
+Request access to I/O ports
 ---------------------------
 
-Before accessing I/O ports we first must request access to them, to make sure there is only one user. In order to do so, one must use the :c:func:`request_region` function:
+Before accessing I/O ports we first must request access to them, to
+make sure there is only one user. In order to do so, one must use the
+:c:func:`request_region` function:
 
 .. code-block:: c
 
    #include <linux/ioport.h>
 
    struct resource *request_region(unsigned long first, unsigned long n,
-		                   const char *name);
+				   const char *name);
 
 To release a reserved region one must use the :c:func:`release_region` function:
 
@@ -124,10 +115,10 @@ these ports:
 
    #define MY_BASEPORT 0x3F8
    #define MY_NR_PORTS 8
-  
+
    if (!request_region(MY_BASEPORT, MY_NR_PORTS, "com1")) {
-   	/* handle error */
-   	return -ENODEV;
+	/* handle error */
+	return -ENODEV;
    }
 
 To release the ports one would use something like:
@@ -225,16 +216,16 @@ first 3 ports of the serial port, and then releases them:
    if (ioperm(MY_BASEPORT, 3, 1)) {
 	/* handle error */
    }
-		
+
    if (ioperm(MY_BASEPORT, 3, 0)) {
 	/* handle error */
    }
-		
+
 The third parameter of the ioperm function is used to request or
 release port permission: 1 to get permission and 0 to release.
 
-Interrupt handling in Linux
-===========================
+Interrupt handling
+==================
 
 Requesting an interrupt
 -----------------------
@@ -298,9 +289,9 @@ context phase:
 .. code-block:: c
 
    #include <linux/interrupt.h>
-		
+
    int request_threaded_irq(unsigned int irq, irq_handler_t handler,
-		            irq_handler_t thread_fn,
+			    irq_handler_t thread_fn,
 			    unsigned long flags, const char *name, void *dev);
 
 *handler* is the function running in interrupt context, and will
@@ -353,7 +344,7 @@ serial port:
 	int err;
 
 	err = request_irq(MY_IRQ, my_handler, IRQF_SHARED,
-		          "com1", my_data);
+			  "com1", my_data);
 	if (err < 0) {
 	    /* handle error*/
 	    return err;
@@ -395,7 +386,7 @@ be performed to enable interrupts:
 
 
 In the above example, two operations are performed:
-   
+
 1. All interruptions are activated by setting bit 3 (Aux Output 2) in
    the MCR register - Modem Control Register
 2. The RDAI (Transmit Holding Register Empty Interrupt) is activated
@@ -433,7 +424,7 @@ The skeleton for an interrupt handler is:
        struct my_device_data *my_data = (struct my_device_data *) dev_id;
 
        /* if interrupt is not for this device (shared interrupts) */
-           /* return IRQ_NONE;*/
+	   /* return IRQ_NONE;*/
 
        /* clear interrupt-pending bit */
        /* read from device or write to device*/
@@ -506,7 +497,7 @@ For read / write spinlocks there are similar functions available:
 * :c:func:`write_unlock_irqrestore`
 * :c:func:`write_lock_irq`
 * :c:func:`write_unlock_irq`
-    
+
 If we want to disable interrupts at the interrupt controller level
 (not recommended because disabling a particular interrupt is slower,
 we can not disable shared interrupts) we can do this with
@@ -551,9 +542,9 @@ as follows:
 .. code-block:: c
 
    static spinlock_t lock;
-   
+
    /* IRQ handling routine: interrupt context */
-   irqreturn_t so2_kbd_interrupt_handle(int irq_no, void * dev_id)
+   irqreturn_t kbd_interrupt_handle(int irq_no, void * dev_id)
    {
        ...
        spin_lock(&lock);
@@ -561,16 +552,16 @@ as follows:
        spin_unlock (&lock);
        ...
    }
-   
+
    /* Process context: Disable interrupts when locking */
    static void my_access(void)
    {
        unsigned long flags;
-   
+
        spin_lock_irqsave(&lock, flags);
        /* Critical region - access shared resource */
        spin_unlock_irqrestore(&lock, flags);
-       
+
        ...
    }
 
@@ -581,7 +572,7 @@ as follows:
        ...
    }
 
-		
+
 The *my_access function* above runs in process context. To
 synchronize access to the share data, we disable the interrupts and
 use the spinlock *lock*, i.e. the :c:func:`spin_lock_irqsave` and
@@ -631,7 +622,7 @@ including the number of interruptions generated since the last (re)boot
 of the system:
 
 .. code-block:: shell
-		
+
    # cat /proc/stat | grep in
    intr 7765626 7754228 4620 0 0 0 0 2 0 1 0 0 0 2377 0 0 41 3259 1098 0 0 0 0 0 0 0 0 0
    0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -669,7 +660,7 @@ Keyboard controller
 -------------------
 
 * `Intel 8042 <http://en.wikipedia.org/wiki/Intel_8042>`_
-* drivers/input/serio/i8042.c 
+* drivers/input/serio/i8042.c
 * drivers/input/keyboard/atkbd.c
 
 Linux device drivers
@@ -678,3 +669,390 @@ Linux device drivers
 * `Linux Device Drivers, 3rd ed., Ch. 9 - Communicating with Hardware <http://lwn.net/images/pdf/LDD3/ch09.pdf>`_
 * `Linux Device Drivers, 3rd ed., Ch. 10 - Interrupt Handling <http://lwn.net/images/pdf/LDD3/ch10.pdf>`_
 * `Interrupt Handlers <http://tldp.org/LDP/lkmpg/2.6/html/x1256.html>`_
+
+
+Exercises
+=========
+
+Intro
+-----
+
+Find the definitions of the following symbols in the Linux kernel:
+
+* :c:type:`struct resource`
+* :c:func:`request_region` and :c:func:`__request_region`
+* :c:func:`request_irq` and  :c:func:`request_threaded_irq`
+* :c:func:`inb` for the x86 architecture.
+
+Analize the following Linux code:
+
+* Keyboard initialization function :c:func:`i8042_setup_kbd`
+* The AT or PS/2 keyboard interrupt function :c:func:`atkbd_interrupt`
+
+Keyboard driver
+---------------
+
+The next exercise's objective is to create a driver that uses the
+keyboard IRQ, inspect the incoming key codes and stores them in a
+buffer. The buffer will be accessible from userspace via character
+device driver. Start by creating a fresh workspace and by generating
+the associated skeleton driver:
+
+.. code-block:: shell
+
+   tools/labs $ make clean
+   tools/labs $ LABS=interrupts make skels
+
+Request the I/O ports (TODO1)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The *kbd.c* file contains a skeleton for the keyboard
+driver. Browse the source code and inspect
+:c:func:`kbd_init`. Notice that the I/O ports we need are
+I8042_STATUS_REG and I8042_DATA_REG.
+
+
+Request the I/O ports int :c:func:`kbd_init` and make sure to check
+for errors and to properly clean-up in case of errors. Also add code
+to release the I/O ports in :c:func:`kbd_exit`.
+
+Now build the module and copy it to the VM image:
+
+.. code-block:: shell
+
+   tools/labs $ make build
+   tools/labs $ make copy
+
+
+Now start the VM and insert the module:
+
+.. code-block:: shell
+
+   rroot@qemux86:~# skels/interrupts/kbd.ko
+   kbd: loading out-of-tree module taints kernel.
+   insmod: can't insert 'skels/interrupts/kbd.ko': Device or resource busy
+
+Notice that you get an error when trying to request the I/O
+ports. This is because we already have a driver that has requestedthe
+I/O ports. To validate check the /proc/ioports file for the STATUS_REG
+and DATA_REG values:
+
+.. code-block:: shell
+
+   root@qemux86:~# cat /proc/ioports | egrep "(0060|0064)"
+   0060-0060 : keyboard
+   0064-0064 : keyboard
+
+
+Lets find out which driver register these ports and try to remove the
+module associated with it.
+
+.. code-block:: shell
+
+   $ find -name \*.c | xargs grep \"keyboard\"
+
+   find -name \*.c | xargs grep \"keyboard\" | egrep '(0x60|0x64)'
+   ...
+   ./arch/x86/kernel/setup.c:{ .name = "keyboard", .start = 0x60, .end = 0x60,
+   ./arch/x86/kernel/setup.c:{ .name = "keyboard", .start = 0x64, .end = 0x64
+
+It looks like the I/O ports are registered by the kernel during the
+boot and we won't be able to remove the associated module. Instead
+lets trick the kernel and register ports 0x61 and 0x65.
+
+This time we can load the module and */proc/ioports* shows that the
+owner of these ports are our module:
+
+.. code-block:: shell
+
+   root@qemux86:~# insmod skels/interrupts/kbd.ko
+   kbd: loading out-of-tree module taints kernel.
+   Driver kbd loaded
+   root@qemux86:~# cat /proc/ioports | grep kbd
+   0061-0061 : kbd
+   0065-0065 : kbd
+
+Lets remove the module and check that the I/O ports are released:
+
+.. code-block:: shell
+
+   root@qemux86:~# rmmod kbd
+   Driver kbd unloaded
+   root@qemux86:~# cat /proc/ioports | grep kbd
+   root@qemux86:~#
+
+Interrupt handling routine (TODO2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+For his task we will implement and register an interrupt handler for
+the keyboard interrupt. You can review the `Requesting an interrupt`_
+section before proceeding.
+
+First, define an empty interrupt handling routine.
+
+.. note:: Since we already have a driver that uses this interrupt we
+	  should report the interrupt as not handled (i.e. return
+	  :c:type:`IRQF_NONE`) so that the original driver still has a
+	  chance to process it.
+
+Then register the interrupt handler routine using
+:c:type:`request_irq`. The interrupt number is defined by the
+`I8042_KBD_IRQ` macro. The interrupt handling routine must be
+requested with :c:type:`IRQF_SHARED` to share the interrupt line with
+the keyboard driver (i8042).
+
+.. note:: For shared interrupts, *dev_id* can not be NULL . Use
+	  ``&devs[0]``, that is pointer to :c:type:`struct kbd`. This
+	  structure contains all the information needed for device
+	  management. To see the interrupt in */proc/interrupts*, do
+	  not use NULL for *dev_name* . You can use the MODULE_NAME
+	  macro.
+
+	  If the interrupt requesting fails make sure to properly
+	  cleanup by jumping to the right label, in this case the one
+	  the releases the I/O ports and continiues with unregistering
+	  the character device driver.
+
+Compile, copy and load module in the kernel. Check that the interrupt
+line has been registered by looking at */proc/interrupts* . Determine
+the IRQ number from the source code (see `I8042_KBD_IRQ`) and verify
+that there are two drivers registered at this interrupt line (which
+means that we have a shared interrupt line): the i8042 initial driver
+and our driver.
+
+.. note:: More details about the format of the */proc/interrupts* can
+	  be found in the `Interrupt statistics`_ section.
+
+Add a message in the interrupt handling routine to check if it is
+called. Compile and reload the module into the kernel. Check that the
+interrupt handling routine is called when you press the keyboard on
+the virtual machine. Also note that when you use the serial port no
+keyboard interrupt is generated.
+
+.. attention:: To get access to the keyboard on the virtual machine
+	       boot with "QEMU_DISPLAY=sdl make boot".
+
+Store ASCII keys to buffer
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Next, we want to collect the keystrokes in a buffer whose content we
+will then send to the user space. For this routine we will add the
+following in the interrupt handling:
+
+* capture the pressed keys (only pressed not and released ) /
+* identify the ASCII characters.
+* copy the ASCII characters corresponding to the keystrokes and store
+  them in the buffer of the device
+
+
+Reading the data register (TODO3)
+.................................
+
+First, fill in the i8042_read_data() function to read the
+I8042_DATA_REG I8042_DATA_REG of the keyboard controller. The function
+just needs to return the value of the register. The value of the
+registry is also called scancode, which is what is generated at each
+keystroke.
+
+.. hint:: Read the I8042_DATA_REG register using :c:func:`inb`.
+
+Then print information about the keystrokes int the following format:
+
+.. code-block:: c
+
+   pr_info("IRQ:% d, scancode = 0x% x (% u,% c) \ n"
+	   irq_no, scancode, scancode, scancode);
+
+
+Where scancode is the value of the read register using the
+i8042_read_data() function.
+
+Notice that the scancode (reading of the read register) is not an ASCII character of the pressed key. We'll have to understand the scancode.
+
+Interpreting the scancode
+.........................
+
+Note that the registry value is a scancode, not the ASCII value of the
+character pressed. Also note that an interrupt is send both when the
+key is pressed and when the key is released. We only need to select
+the code when the key is pressed and then and decode the ASCII
+character.
+
+.. note:: To check scancode, we can use the showkey command (showkey
+	  -s).
+
+	  In this form, the command will display the key scancodes for
+	  10 seconds after the last pressed key end then it will
+	  stop. If you press and release a key you will get two
+	  scancodes: one for the pressed key and one for the released
+	  key. E.g:
+
+	  * If you press the ENTER key, you will get the 0x1c ( 0x1c )
+	    and 0x9c (for the released key)
+	  * If you press the key a you will get the 0x1e (key pressed)
+	    and 0x9e (for the key release)
+	  * If you press b you will get 0x30 (key pressed) and 0xb0
+	    (for the release key)
+	  * If you press the c key, you will get the 0x2e (key
+	    pressed) 0xae and 0xae (for the released key)
+	  * If you press the Shift key you will get the 0x2a (key
+	    pressed) 0xaa and 0xaa (for the released key)
+	  * If you press the Ctrl key you will get the 0x1d (key
+	    pressed) and 0x9d (for the release key)
+
+	    As also indicated in this `article
+	    <http://www.linuxjournal.com/article/1080>`_, a key
+	    release scancode is 128 (0x80) higher then a key press
+	    scancode. This is how we can distinguish between a press
+	    key scancode and a release scancode.
+
+	    A scancode is translated into a keycode that matches a
+	    key. A pressed scanned keycode and a released scancode
+	    have the same keycode. For the keys shown above we have
+	    the following table:
+
+	    .. flat-table::
+
+	       * - Key
+		 - Key Press Scancode
+		 - Key Release Scancode
+		 - Keycode
+
+	       * - ENTER
+		 - 0x1e
+		 - 0x9e
+		 - 0x1e (30)
+
+	       * - a
+		 - 0x1e
+		 - 0x9e
+		 - 0x1e (30)
+
+	       * - b
+		 - 0x3e
+		 - 0x9e
+		 - 0x30 (48)
+
+	       * - c
+		 - 0x2e
+		 - 0x9e
+		 - 0x2e (46)
+
+	       * - Shift
+		 - 0x2a
+		 - 0xaa
+		 - 0x2a (42)
+
+	       * - Ctrl
+		 - 0x1d
+		 - 0x9d
+		 - 0x1d (29)
+
+	    The press / release key is performed in the is_key_press()
+	    function and obtaining the ASCII character of a scancode
+	    takes place in the get_ascii() function.
+
+In the interrupt handler check the scancode to see if the key is
+pressed or released then determine the corresponding ASCII
+character.
+
+.. hint:: To check for press / release, use :c:func:`is_key_press`.
+	   Use :c:func:`get_ascii` function to get the corresponding
+	   ASCII code. Both functions expects the scancode.
+
+
+.. hint:: To display the received information use the following
+	  format.
+
+	  .. code-block:: c
+
+	     pr_info("IRQ %d: scancode=0x%x (%u) pressed=%d ch=%c\n",
+		     irq_no, scancode, scancode, pressed, ch);
+
+	  Where scancode is the value of the data register, and ch is
+	  the value returned by the get_ascii() function.
+
+
+Store characters to the buffer (TODO4)
+......................................
+
+We want to collect the pressed characters (not the other keys) into a
+buffer that can be read from user space.
+
+Update the interrupt handler to add an ASCII character to the end of
+the device buffer. If the buffer is full, the character will be
+discarded.
+
+.. hint:: To reach the device data from the interrupt handler use the
+	  following construct:
+
+	  .. code-block:: c
+
+	     struct kbd *data = (struct kbd *) dev_id;
+
+	  The device buffer is the *buf* field of :c:type:`struct
+	  kbd`.
+
+	  The current buffer size is given by the *buf_idx* field.
+
+	  The buffer capacity, beyond which you can not write, is
+	  provided by the BUFFER_SIZE macro.
+
+
+In order to access the data collected in the device buffer, we will
+have to pass it user space. We do this by opening and reading our
+character device driver (/dev/kbd). To keep things simple, we won't
+consume the data from the device when reading it from userspace (we
+will just make a copy).
+
+Since we do not want changes to the buffer from the interrupt handler
+while reading the data we will use a spinlock and disable the
+interrupts in the read function.
+
+.. hint:: Define the spinlock in the device structure and initialize
+	  it. Use :c:func:`spin_lock_irqsave` and
+	  :c:func:`spin_unlock_irqrestore` to lock and disable
+	  interrupts while working with the buffer. Use
+	  :c:func:`spin_lock` and :c:func:`spin_unlock` to protect
+	  buffering in the interrupt handling routine.
+
+	  Revisit the `Locking`_ section.
+
+To copy the buffer in user space, use :c:func:`copy_to_user`. Since we
+can't use this function under a spinlock, a temporary buffer must be
+used
+
+.. hint:: Use the the *tmp_buf* as a temporary buffer and copy the
+	  data from *buf* while holding the spinlock with interrupts
+	  disabled. Use *tmp_buf_idx* to store the number of bytes to
+	  copy to userspace.
+
+
+For testing, you will need to create the */dev/kbd* character device
+driver using the mknod before reading from it. The device master and
+minor are defined as ``KBD_MAJOR`` and ``KBD_MINOR``:
+
+.. code-block:: c
+
+   mknod /dev/kbd c 42 0
+   cat /dev/kbd
+
+
+Cleaning the buffer (TODO5)
+...........................
+
+We want to reset the buffer if a password is typed. At that point the
+buffer will be cleared and the size will be set to 0.
+
+.. hint:: Use the *passcnt* field to count how many password
+	  characters have been matched. The password is defined by the
+	  `MAGIC_WORD` and `MAGIC_WORD_LEN`.
+
+	  Upon receiving a new character, verify that it matches the
+	  character in the current password position. If so, increment
+	  the counter. Otherwise, reset the counter to 0.
+
+	  At the time of resetting the buffer, need to use the
+	  spinlock for exclusive access to the buffer. The read
+	  routine may be processed by another processor and access the
+	  buffer when the interrupt handler changes it.
