@@ -1,5 +1,11 @@
 #!/bin/bash
 
+size=$(stat -c%s $1)
+if [ $size -lt 50000000 ]; then
+    e2fsck -f $1
+    resize2fs $1 50M
+fi
+
 TMP=$(mktemp -d)
 
 mount -t ext4 -o loop $1 $TMP
