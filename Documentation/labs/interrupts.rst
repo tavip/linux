@@ -697,22 +697,22 @@ Keyboard driver
 The next exercise's objective is to create a driver that uses the
 keyboard IRQ, inspect the incoming key codes and stores them in a
 buffer. The buffer will be accessible from userspace via character
-device driver. Start by creating a fresh workspace and by generating
-the associated skeleton driver:
+device driver.
+
+Start by creating a fresh workspace generating skeleton driver for
+*interrupts*:
 
 .. code-block:: shell
 
    tools/labs $ make clean
    tools/labs $ LABS=interrupts make skels
 
-Request the I/O ports (TODO1)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Request the I/O ports
+~~~~~~~~~~~~~~~~~~~~~
 
-The *kbd.c* file contains a skeleton for the keyboard
-driver. Browse the source code and inspect
-:c:func:`kbd_init`. Notice that the I/O ports we need are
-I8042_STATUS_REG and I8042_DATA_REG.
-
+The *kbd.c* file contains a skeleton for the keyboard driver. Browse
+the source code and inspect :c:func:`kbd_init`. Notice that the I/O
+ports we need are I8042_STATUS_REG and I8042_DATA_REG.
 
 Request the I/O ports int :c:func:`kbd_init` and make sure to check
 for errors and to properly clean-up in case of errors. Also add code
@@ -783,12 +783,14 @@ Lets remove the module and check that the I/O ports are released:
    root@qemux86:~# cat /proc/ioports | grep kbd
    root@qemux86:~#
 
-Interrupt handling routine (TODO2)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interrupt handling routine
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For his task we will implement and register an interrupt handler for
 the keyboard interrupt. You can review the `Requesting an interrupt`_
 section before proceeding.
+
+Follow the sections maked with **TODO 2** in the skeleton.
 
 First, define an empty interrupt handling routine.
 
@@ -846,9 +848,10 @@ following in the interrupt handling:
 * copy the ASCII characters corresponding to the keystrokes and store
   them in the buffer of the device
 
+Follow the sectios marked **TODO 3** in the skeleton.
 
-Reading the data register (TODO3)
-.................................
+Reading the data register
+.........................
 
 First, fill in the i8042_read_data() function to read the
 I8042_DATA_REG I8042_DATA_REG of the keyboard controller. The function
@@ -975,60 +978,43 @@ character.
 	  the value returned by the get_ascii() function.
 
 
-Store characters to the buffer (TODO4)
-......................................
+Store characters to the buffer
+..............................
 
-We want to collect the pressed characters (not the other keys) into a
-buffer that can be read from user space.
+We want to collect the pressed characters (not the other keys) into
+circular a buffer that can be consumed from user space. For this step
+follow the sections marked with **TODO 4** in the skeleton.
 
-Update the interrupt handler to add an ASCII character to the end of
-the device buffer. If the buffer is full, the character will be
+Implement :c:func:`get_char` in a similar with  :c:func:`put_char`.
+
+Update the interrupt handler to add a pressed ASCII character to the
+end of the device buffer. If the buffer is full, the character will be
 discarded.
 
-.. hint:: To reach the device data from the interrupt handler use the
+.. hint:: To get the device data from the interrupt handler use the
 	  following construct:
 
 	  .. code-block:: c
 
 	     struct kbd *data = (struct kbd *) dev_id;
 
-	  The device buffer is the *buf* field of :c:type:`struct
-	  kbd`.
-
-	  The current buffer size is given by the *buf_idx* field.
-
-	  The buffer capacity, beyond which you can not write, is
-	  provided by the BUFFER_SIZE macro.
+.. attention:: Synchronize the access to the buffer and the helper
+	       indexes with a spinlock.
 
 
-In order to access the data collected in the device buffer, we will
-have to pass it user space. We do this by opening and reading our
-character device driver (/dev/kbd). To keep things simple, we won't
-consume the data from the device when reading it from userspace (we
-will just make a copy).
+In the read function copy the data from the buffer to the userspace
+buffer.
 
-Since we do not want changes to the buffer from the interrupt handler
-while reading the data we will use a spinlock and disable the
-interrupts in the read function.
+.. hint:: Use :c:func:`get_char` to read a character from the buffer
+	  and put_user to store it to the user buffer.
 
-.. hint:: Define the spinlock in the device structure and initialize
-	  it. Use :c:func:`spin_lock_irqsave` and
-	  :c:func:`spin_unlock_irqrestore` to lock and disable
-	  interrupts while working with the buffer. Use
-	  :c:func:`spin_lock` and :c:func:`spin_unlock` to protect
-	  buffering in the interrupt handling routine.
+.. attention:: In the read function Use :c:func:`spin_lock_irqsave` and
+	       :c:func:`spin_unlock_irqrestore` for locking.
 
-	  Revisit the `Locking`_ section.
+	       Revisit the `Locking`_ section.
 
-To copy the buffer in user space, use :c:func:`copy_to_user`. Since we
-can't use this function under a spinlock, a temporary buffer must be
-used
-
-.. hint:: Use the the *tmp_buf* as a temporary buffer and copy the
-	  data from *buf* while holding the spinlock with interrupts
-	  disabled. Use *tmp_buf_idx* to store the number of bytes to
-	  copy to userspace.
-
+.. attention:: Do use :c:func:`put_user` while holding the lock, as
+	       userpace access is not permitted from atomic contexts.
 
 For testing, you will need to create the */dev/kbd* character device
 driver using the mknod before reading from it. The device master and
@@ -1040,11 +1026,13 @@ minor are defined as ``KBD_MAJOR`` and ``KBD_MINOR``:
    cat /dev/kbd
 
 
-Cleaning the buffer (TODO5)
-...........................
+Reset the buffer
+................
 
-We want to reset the buffer if a password is typed. At that point the
-buffer will be cleared and the size will be set to 0.
+Reset the buffer if the device is written to. For this step follow the
+sections makred with **TODO 5** in the skeleton.
+
+Implement :c:func:`reset_buffer` and add the write operation to *kbd_fops*.
 
 .. hint:: Use the *passcnt* field to count how many password
 	  characters have been matched. The password is defined by the
