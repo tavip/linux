@@ -31,7 +31,7 @@ MODULE_LICENSE("GPL");
 
 struct kbd {
 	struct cdev cdev;
-	/* TODO4: add spinlock */
+	/* TODO 4: add spinlock */
 	spinlock_t lock;
 	char buf[BUFFER_SIZE];
 	size_t buf_idx;
@@ -83,19 +83,19 @@ static int get_ascii(unsigned int scancode)
 static inline u8 i8042_read_data(void)
 {
 	u8 val;
-	/* TODO3: Read DATA register (8 bits). */
+	/* TODO 3: Read DATA register (8 bits). */
 	val = inb(I8042_DATA_REG);
 	return val;
 }
 
-/* TODO2/45: implement interrupt handler */
+/* TODO 2/45: implement interrupt handler */
 irqreturn_t kbd_interrupt_handle(int irq_no, void *dev_id)
 {
 
 	unsigned int scancode = 0;
 	int pressed, ch;
 
-	/* TODO3: read scancode */
+	/* TODO 3: read scancode */
 	scancode = i8042_read_data();
 	pressed = is_key_press(scancode);
 	ch = get_ascii(scancode);
@@ -103,7 +103,7 @@ irqreturn_t kbd_interrupt_handle(int irq_no, void *dev_id)
 	pr_info("IRQ %d: scancode=0x%x (%u) pressed=%d ch=%c\n",
 		irq_no, scancode, scancode, pressed, ch);
 
-	/* TODO4/27: store ASCII key to buffer */
+	/* TODO 4/27: store ASCII key to buffer */
 	if (pressed) {
 		struct kbd *data = (struct kbd *) dev_id;
 		const char *magic = MAGIC_WORD;
@@ -116,7 +116,7 @@ irqreturn_t kbd_interrupt_handle(int irq_no, void *dev_id)
 		}
 		spin_unlock(&data->lock);
 
-		/* TODO5/13: Match password and clean buffer */
+		/* TODO 5/13: Match password and clean buffer */
 		if (magic[data->passcnt] == ch)
 			data->passcnt++;
 		else
@@ -157,26 +157,26 @@ static ssize_t kbd_read(struct file *file,  char __user *user_buffer,
 	struct kbd *data = (struct kbd *) file->private_data;
 	size_t to_read = 0;
 
-	/* TODO4: acquire spinlock */
+	/* TODO 4: acquire spinlock */
 	spin_lock_irqsave(&data->lock, flags);
 	if (*offset > data->buf_idx) {
-		/* TODO4: release spinlock */
+		/* TODO 4: release spinlock */
 		spin_unlock_irqrestore(&data->lock, flags);
 		return 0;
 	}
 
-	/* TODO4/3: copy to temp buffer and release spinlock */
+	/* TODO 4/3: copy to temp buffer and release spinlock */
 	memcpy(data->tmp_buf, data->buf, data->buf_idx);
 	data->tmp_buf_idx = data->buf_idx;
 	spin_unlock_irqrestore(&data->lock, flags);
 
-	/* TODO4/4: compute to_read value */
+	/* TODO 4/4: compute to_read value */
 	if (size > data->tmp_buf_idx - *offset)
 		to_read = data->tmp_buf_idx - *offset;
 	else
 		to_read = size;
 
-	/* TODO4/2: copy buffer to userspace */
+	/* TODO 4/2: copy buffer to userspace */
 	if (copy_to_user(user_buffer, data->tmp_buf, to_read))
 		return -EFAULT;
 
@@ -204,7 +204,7 @@ static int kbd_init(void)
 		goto out;
 	}
 
-	/* TODO1/8: request the keyboard I/O ports */
+	/* TODO 1/8: request the keyboard I/O ports */
 	if (request_region(I8042_DATA_REG+1, 1, MODULE_NAME) == NULL) {
 		err = -EBUSY;
 		goto out_unregister;
@@ -214,13 +214,13 @@ static int kbd_init(void)
 		goto out_unregister;
 	}
 
-	/* TODO4: initialize spinlock */
+	/* TODO 4: initialize spinlock */
 	spin_lock_init(&devs[0].lock);
 
 	memset(devs[0].buf, 0, BUFFER_SIZE);
 	devs[0].buf_idx = 0;
 
-	/* TODO2/7: Register IRQ handler for keyboard IRQ (IRQ 1). */
+	/* TODO 2/7: Register IRQ handler for keyboard IRQ (IRQ 1). */
 	err = request_irq(I8042_KBD_IRQ,
 			kbd_interrupt_handle,
 			IRQF_SHARED, MODULE_NAME, &devs[0]);
@@ -235,7 +235,7 @@ static int kbd_init(void)
 	pr_notice("Driver %s loaded\n", MODULE_NAME);
 	return 0;
 
-	/*TODO2/3: release regions in case of error */
+	/*TODO 2/3: release regions in case of error */
 out_release_regions:
 	release_region(I8042_STATUS_REG+1, 1);
 	release_region(I8042_DATA_REG+1, 1);
@@ -251,10 +251,10 @@ static void kbd_exit(void)
 {
 	cdev_del(&devs[0].cdev);
 
-	/* TODO2: Free IRQ. */
+	/* TODO 2: Free IRQ. */
 	free_irq(I8042_KBD_IRQ, &devs[0]);
 
-	/* TODO1/2: release keyboard I/O ports */
+	/* TODO 1/2: release keyboard I/O ports */
 	release_region(I8042_STATUS_REG+1, 1);
 	release_region(I8042_DATA_REG+1, 1);
 
