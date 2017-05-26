@@ -1,8 +1,3 @@
-/*
- * SO2 Lab - Interrupts (#5)
- * All tasks
- */
-
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
@@ -13,18 +8,16 @@
 #include <linux/ioport.h>
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
-#include <linux/mutex.h>
 
-MODULE_DESCRIPTION("SO2 KBD");
-MODULE_AUTHOR("SO2");
+MODULE_DESCRIPTION("KBD");
+MODULE_AUTHOR("Kernel Hacker");
 MODULE_LICENSE("GPL");
 
-#define LOG_LEVEL		KERN_ALERT
-#define MODULE_NAME		"so2_kbd"
+#define MODULE_NAME		"kbd"
 
-#define SO2_KBD_MAJOR		42
-#define SO2_KBD_MINOR		0
-#define SO2_KBD_NR_MINORS	1
+#define KBD_MAJOR		42
+#define KBD_MINOR		0
+#define KBD_NR_MINORS	1
 
 #define I8042_KBD_IRQ		1
 #define I8042_STATUS_REG	0x64
@@ -36,9 +29,9 @@ MODULE_LICENSE("GPL");
 #define MAGIC_WORD		"root"
 #define MAGIC_WORD_LEN		4
 
-struct so2_device_data {
+struct kbd {
 	struct cdev cdev;
-	struct mutex mutex;
+	/* TODO4: add spinlock */
 	spinlock_t lock;
 	char buf[BUFFER_SIZE];
 	size_t buf_idx;
@@ -90,29 +83,31 @@ static int get_ascii(unsigned int scancode)
 static inline u8 i8042_read_data(void)
 {
 	u8 val;
-	/* Read DATA register (8 bits). */
+	/* TODO3: Read DATA register (8 bits). */
 	val = inb(I8042_DATA_REG);
 	return val;
 }
 
-/*
- * Handle IRQ 1 (keyboard IRQ).
- */
-irqreturn_t so2_kbd_interrupt_handle(int irq_no, void *dev_id)
+/* TODO2/45: implement interrupt handler */
+irqreturn_t kbd_interrupt_handle(int irq_no, void *dev_id)
 {
-	unsigned int scancode;
-	int pressed, ch;
-	struct so2_device_data *data = (struct so2_device_data *) dev_id;
-	const char *magic = MAGIC_WORD;
 
+	unsigned int scancode = 0;
+	int pressed, ch;
+
+	/* TODO3: read scancode */
 	scancode = i8042_read_data();
 	pressed = is_key_press(scancode);
 	ch = get_ascii(scancode);
 
-	printk(LOG_LEVEL "IRQ %d: scancode=0x%x (%u) pressed=%d ch=%c\n",
+	pr_info("IRQ %d: scancode=0x%x (%u) pressed=%d ch=%c\n",
 		irq_no, scancode, scancode, pressed, ch);
 
+	/* TODO4/27: store ASCII key to buffer */
 	if (pressed) {
+		struct kbd *data = (struct kbd *) dev_id;
+		const char *magic = MAGIC_WORD;
+
 		spin_lock(&data->lock);
 		if (data->buf_idx < BUFFER_SIZE) {
 			/* Append character to buffer. */
@@ -121,10 +116,7 @@ irqreturn_t so2_kbd_interrupt_handle(int irq_no, void *dev_id)
 		}
 		spin_unlock(&data->lock);
 
-		/*
-		 * If character is matched, increase matched counter.
-		 * Otherwise, reset matched counter.
-		 */
+		/* TODO5/13: Match password and clean buffer */
 		if (magic[data->passcnt] == ch)
 			data->passcnt++;
 		else
@@ -143,144 +135,134 @@ irqreturn_t so2_kbd_interrupt_handle(int irq_no, void *dev_id)
 	return IRQ_NONE;
 }
 
-static int so2_kbd_open(struct inode *inode, struct file *file)
+static int kbd_open(struct inode *inode, struct file *file)
 {
-	struct so2_device_data *data =
-		container_of(inode->i_cdev, struct so2_device_data, cdev);
+	struct kbd *data = container_of(inode->i_cdev, struct kbd, cdev);
 
 	file->private_data = data;
-	printk(LOG_LEVEL "%s opened\n", MODULE_NAME);
+	pr_info("%s opened\n", MODULE_NAME);
 	return 0;
 }
 
-static int so2_kbd_release(struct inode *inode, struct file *file)
+static int kbd_release(struct inode *inode, struct file *file)
 {
-	printk(LOG_LEVEL "%s closed\n", MODULE_NAME);
+	pr_info("%s closed\n", MODULE_NAME);
 	return 0;
 }
 
-static ssize_t so2_kbd_read(struct file *file,
-		char __user *user_buffer,
-		size_t size, loff_t *offset)
+static ssize_t kbd_read(struct file *file,  char __user *user_buffer,
+			size_t size, loff_t *offset)
 {
 	unsigned long flags;
-	struct so2_device_data *data =
-		(struct so2_device_data *) file->private_data;
-	size_t to_read;
+	struct kbd *data = (struct kbd *) file->private_data;
+	size_t to_read = 0;
 
-	/* Readers are exclusive. */
-	mutex_lock(&data->mutex);
-
-	/*
-	 * Copy information to temporary buffer.
-	 * We need to disable local interrupts and we need locking
-	 * to synchronize with interrupts on other CPUs.
-	 */
+	/* TODO4: acquire spinlock */
 	spin_lock_irqsave(&data->lock, flags);
 	if (*offset > data->buf_idx) {
+		/* TODO4: release spinlock */
 		spin_unlock_irqrestore(&data->lock, flags);
-		mutex_unlock(&data->mutex);
 		return 0;
 	}
-	data->tmp_buf_idx = data->buf_idx;
+
+	/* TODO4/3: copy to temp buffer and release spinlock */
 	memcpy(data->tmp_buf, data->buf, data->buf_idx);
+	data->tmp_buf_idx = data->buf_idx;
 	spin_unlock_irqrestore(&data->lock, flags);
 
+	/* TODO4/4: compute to_read value */
 	if (size > data->tmp_buf_idx - *offset)
 		to_read = data->tmp_buf_idx - *offset;
 	else
 		to_read = size;
+
+	/* TODO4/2: copy buffer to userspace */
 	if (copy_to_user(user_buffer, data->tmp_buf, to_read))
 		return -EFAULT;
 
 	/* Update offset. */
 	*offset += to_read;
 
-	mutex_unlock(&data->mutex);
-
 	return to_read;
 }
 
-static const struct file_operations so2_kbd_fops = {
+static const struct file_operations kbd_fops = {
 	.owner = THIS_MODULE,
-	.open = so2_kbd_open,
-	.release = so2_kbd_release,
-	.read = so2_kbd_read,
+	.open = kbd_open,
+	.release = kbd_release,
+	.read = kbd_read,
 };
 
-static int so2_kbd_init(void)
+static int kbd_init(void)
 {
 	int err;
 
-	err = register_chrdev_region(MKDEV(SO2_KBD_MAJOR, SO2_KBD_MINOR),
-			SO2_KBD_NR_MINORS,
-			MODULE_NAME);
+	err = register_chrdev_region(MKDEV(KBD_MAJOR, KBD_MINOR),
+				     KBD_NR_MINORS, MODULE_NAME);
 	if (err != 0) {
-		printk(LOG_LEVEL "ERROR: %s: error %d\n",
-				"register_region", err);
+		pr_err("register_region failed: %d", err);
 		goto out;
 	}
 
-#if 0
-	/* The following piece of code will fail, so leave it out. */
-	if (request_region(I8042_DATA_REG, 1, MODULE_NAME) == NULL) {
-		/* Will always fail, port is already used by keyboard driver. */
-		/* cat /proc/iports | grep keyboard */
+	/* TODO1/8: request the keyboard I/O ports */
+	if (request_region(I8042_DATA_REG+1, 1, MODULE_NAME) == NULL) {
+		err = -EBUSY;
+		goto out_unregister;
+	}
+	if (request_region(I8042_STATUS_REG+1, 1, MODULE_NAME) == NULL) {
+		err = -EBUSY;
+		goto out_unregister;
 	}
 
-	if (request_region(I8042_STATUS_REG, 1, MODULE_NAME) == NULL) {
-		/* Will always fail, same as above. */
-	}
-#endif
-
-	/* Initialize spinlock, mutex and buffers before requesting IRQ. */
-	mutex_init(&devs[0].mutex);
+	/* TODO4: initialize spinlock */
 	spin_lock_init(&devs[0].lock);
 
 	memset(devs[0].buf, 0, BUFFER_SIZE);
 	devs[0].buf_idx = 0;
-	memset(devs[0].tmp_buf, 0, BUFFER_SIZE);
-	devs[0].tmp_buf_idx = 0;
 
-	/* Register IRQ handler for keyboard IRQ (IRQ 1). */
+	/* TODO2/7: Register IRQ handler for keyboard IRQ (IRQ 1). */
 	err = request_irq(I8042_KBD_IRQ,
-			so2_kbd_interrupt_handle,
+			kbd_interrupt_handle,
 			IRQF_SHARED, MODULE_NAME, &devs[0]);
 	if (err != 0) {
-		printk(LOG_LEVEL "ERROR: %s: error %d\n", "request_irq", err);
-		goto out_unregister;
+		pr_err("request_irq failed: %d", err);
+		goto out_release_regions;
 	}
 
-	cdev_init(&devs[0].cdev, &so2_kbd_fops);
-	cdev_add(&devs[0].cdev, MKDEV(SO2_KBD_MAJOR, SO2_KBD_MINOR), 1);
+	cdev_init(&devs[0].cdev, &kbd_fops);
+	cdev_add(&devs[0].cdev, MKDEV(KBD_MAJOR, KBD_MINOR), 1);
 
-	printk(LOG_LEVEL "Driver %s loaded\n", MODULE_NAME);
+	pr_notice("Driver %s loaded\n", MODULE_NAME);
 	return 0;
 
+	/*TODO2/3: release regions in case of error */
+out_release_regions:
+	release_region(I8042_STATUS_REG+1, 1);
+	release_region(I8042_DATA_REG+1, 1);
+
 out_unregister:
-	unregister_chrdev_region(MKDEV(SO2_KBD_MAJOR, SO2_KBD_MINOR),
-			SO2_KBD_NR_MINORS);
+	unregister_chrdev_region(MKDEV(KBD_MAJOR, KBD_MINOR),
+				 KBD_NR_MINORS);
 out:
 	return err;
 }
 
-static void so2_kbd_exit(void)
+static void kbd_exit(void)
 {
 	cdev_del(&devs[0].cdev);
 
-	/* Free IRQ. */
+	/* TODO2: Free IRQ. */
 	free_irq(I8042_KBD_IRQ, &devs[0]);
 
-#if 0
-	/* We didn't call request_region, so leave this out. */
-	release_region(I8042_STATUS_REG, 1);
-	release_region(I8042_DATA_REG, 1);
-#endif
+	/* TODO1/2: release keyboard I/O ports */
+	release_region(I8042_STATUS_REG+1, 1);
+	release_region(I8042_DATA_REG+1, 1);
 
-	unregister_chrdev_region(MKDEV(SO2_KBD_MAJOR, SO2_KBD_MINOR),
-			SO2_KBD_NR_MINORS);
-	printk(LOG_LEVEL "Driver %s unloaded\n", MODULE_NAME);
+
+	unregister_chrdev_region(MKDEV(KBD_MAJOR, KBD_MINOR),
+				 KBD_NR_MINORS);
+	pr_notice("Driver %s unloaded\n", MODULE_NAME);
 }
 
-module_init(so2_kbd_init);
-module_exit(so2_kbd_exit);
+module_init(kbd_init);
+module_exit(kbd_exit);
