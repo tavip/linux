@@ -24,12 +24,12 @@ lab. Labs can be selecting by using the **LABS** variable:
    1-2-test-mod  3-error-mod  4-multi-mod  5-oops-mod  6-cmd-mod  \
    7-list-proc  8-kprobes  9-kdb
 
-You can also uses the **TASKS** variable to generate skeletons for
-specific tasks:
+You can also uses the same variable to generate skeletons for specific
+tasks:
 
 .. code-block:: shell
 
-   tools/labs $ TASKS="kernel_modules/6-cmd-mod kernel_modules/8-kprobes" make skels
+   tools/labs $ LABS="kernel_modules/6-cmd-mod kernel_modules/8-kprobes" make skels
 		
    tools/labs$ ls skels/kernel_modules
    6-cmd-mod  8-kprobes
@@ -46,7 +46,7 @@ skeleton with the first *TODO* step resolved:
 
 .. code-block:: shell
 
-   tools/labs $ TODO=2 TASKS="kernel_modules/8-kprobes" skels
+   tools/labs $ TODO=2 LABS="kernel_modules/8-kprobes" skels
 
 Once the skelton drivers are generated you can build them with the
 **build** make target:
