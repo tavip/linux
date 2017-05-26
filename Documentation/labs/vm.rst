@@ -41,10 +41,11 @@ tools/labs:
 		--display none -s
    char device redirected to /dev/pts/19 (label virtiocon0)
 
-There are two architectures supported, which can be selected with the
-ARCH environment variable: x86 and arm. The default architecture is
-x86.
 
+.. note:: To show the qemu console use "QEMU_DISPLAY=sdl make
+          boot". This will show the VGA output and will also give
+          access to the standard keyboard.
+   
 Connecting to the VM
 --------------------
 
