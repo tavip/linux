@@ -30,6 +30,8 @@ $(KCONFIG): qemu/kernel_config.x86
 	cp $^ $@
 	$(MAKE) -C $(KDIR) oldnoconfig
 
+zImage: $(ZIMAGE)
+
 $(ZIMAGE): $(KCONFIG)
 	$(MAKE) -C $(KDIR)
 	$(MAKE) -C $(KDIR) modules
