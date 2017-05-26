@@ -14,7 +14,7 @@
 #define MY_IOCTL_TIMER_SET	_IOW('k', 1, unsigned long)
 #define MY_IOCTL_TIMER_CANCEL	_IO ('k', 2)
 #define MY_IOCTL_TIMER_ALLOC	_IOW('k', 3, unsigned long)
-#define MY_IOCTL_TIMER_ACCT	_IO ('k', 4)
+#define MY_IOCTL_TIMER_MON	_IO ('k', 4)
 
 /* converts ioctl command code to message */
 inline static char *ioctl_command_to_string(int cmd)
@@ -26,8 +26,8 @@ inline static char *ioctl_command_to_string(int cmd)
 		return "Cancel timer";
 	case MY_IOCTL_TIMER_ALLOC:
 		return "Allocate memory";
-	case MY_IOCTL_TIMER_ACCT:
-		return "Account involuntary context switches";
+	case MY_IOCTL_TIMER_MON:
+		return "Monitor pid";
 	}
 	return "Unknown command";
 }

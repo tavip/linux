@@ -14,10 +14,9 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-
+#include <linux/sched/task.h>
 #include "../include/deferred.h"
 
-#define LOG_LEVEL 		KERN_ALERT
 #define MY_MAJOR		42
 #define MY_MINOR		0
 #define MODULE_NAME		"deferred"
@@ -25,60 +24,112 @@
 #define TIMER_TYPE_NONE		-1
 #define TIMER_TYPE_SET		0
 #define TIMER_TYPE_ALLOC	1
-#define TIMER_TYPE_ACCT		2
+#define TIMER_TYPE_MON		2
 
 MODULE_DESCRIPTION("Deferred work character device");
 MODULE_AUTHOR("SO2");
 MODULE_LICENSE("GPL");
 
-
-#define BUFFER_LEN	128
+struct mon_proc {
+	struct task_struct *task;
+	struct list_head list;
+};
 
 static struct my_device_data {
 	struct cdev cdev;
+	/* TODO 1: add timer */
 	struct timer_list timer;
+	/* TODO 2: add flag */
 	int flag;
+	/* TODO 3: add work */
 	struct work_struct work;
+	/* TODO 4: add list for monitored processes */
+	struct list_head list;
+	/* TODO 4: add spinlock to protect list */
 	spinlock_t lock;
-	unsigned long buf[BUFFER_LEN];
-	unsigned long tmp_buf[BUFFER_LEN];
-	size_t tmp_buf_idx;
-	size_t buf_idx;
 } dev;
 
 static void alloc_io(void)
 {
 	set_current_state(TASK_INTERRUPTIBLE);
-	schedule_timeout(5000);
-	printk(LOG_LEVEL "Yawn! I've been sleeping for 5 seconds.\n");
+	schedule_timeout(5 * HZ);
+	pr_info("Yawn! I've been sleeping for 5 seconds.\n");
 }
 
+static struct mon_proc *get_proc(pid_t pid)
+{
+	struct task_struct *task;
+	struct mon_proc *p;
+
+	task = pid_task(find_vpid(pid), PIDTYPE_PID);
+	if (!task)
+		return ERR_PTR(-ESRCH);
+
+	p = kmalloc(sizeof(p), GFP_ATOMIC);
+	if (!p)
+		return ERR_PTR(-ENOMEM);
+
+	get_task_struct(task);
+	p->task = task;
+
+	return p;
+}
+
+
+/* TODO 3/4: define work handler */
 static void work_handler(struct work_struct *work)
 {
 	alloc_io();
 }
 
+#define ALLOC_IO_DIRECT
+/* TODO 3: undef ALLOC_IO_DIRECT*/
+#undef ALLOC_IO_DIRECT
+
 static void timer_handler(unsigned long var)
 {
+	/* TODO 1/44: implement timer handler */
 	struct my_device_data *my_data = (struct my_device_data *) var;
 
+	pr_info("[timer_handler] pid = %d, comm = %s\n",
+		current->pid, current->comm);
+
+	/* TODO 2/38: check flags: TIMER_TYPE_SET or TIMER_TYPE_ALLOC */
 	switch (my_data->flag) {
 	case TIMER_TYPE_SET:
-		printk(LOG_LEVEL "[timer_handler] pid = %d, comm = %s\n", current->pid, current->comm);
 		break;
 	case TIMER_TYPE_ALLOC:
+#ifdef ALLOC_IO_DIRECT
+		alloc_io();
+#else
+		/* TODO 3: schedule work */
 		schedule_work(&my_data->work);
+#endif
 		break;
-	case TIMER_TYPE_ACCT:
-		if (current->pid == 0) {
-			spin_lock(&my_data->lock);
-			if (my_data->buf_idx < BUFFER_LEN) {
-				my_data->buf[my_data->buf_idx] = current->nivcsw;
-				my_data->buf_idx++;
+	case TIMER_TYPE_MON:
+	{
+		/* TODO 4/19: iterate the list and check the proccess state */
+		struct mon_proc *p, *n;
+
+		spin_lock(&my_data->lock);
+		list_for_each_entry_safe(p, n, &my_data->list, list) {
+			/* TODO 4: if task is dead print info ... */
+			/* TODO 4: ... decrement task usage counter ... */
+			/* TODO 4: ... remove it from the list ... */
+			/* TODO 4: ... free the struct mon_proc */
+			if (p->task->state == TASK_DEAD) {
+				pr_info("task %s (%d) is dead\n", p->task->comm,
+					p->task->pid);
+				put_task_struct(p->task);
+				list_del(&p->list);
+				kfree(p);
 			}
-			spin_unlock(&my_data->lock);
 		}
+		spin_unlock(&my_data->lock);
+
 		mod_timer(&my_data->timer, jiffies + HZ);
+		break;
+	}
 	default:
 		break;
 	}
@@ -89,13 +140,13 @@ static int deferred_open(struct inode *inode, struct file *file)
 	struct my_device_data *my_data =
 		container_of(inode->i_cdev, struct my_device_data, cdev);
 	file->private_data = my_data;
-	printk(LOG_LEVEL "[deferred_open] Device opened\n");
+	pr_info("[deferred_open] Device opened\n");
 	return 0;
 }
 
 static int deferred_release(struct inode *inode, struct file *file)
 {
-	printk(LOG_LEVEL "[deferred_release] Device released\n");
+	pr_info("[deferred_release] Device released\n");
 	return 0;
 }
 
@@ -103,52 +154,45 @@ static long deferred_ioctl(struct file *file, unsigned int cmd, unsigned long ar
 {
 	struct my_device_data *my_data = (struct my_device_data*) file->private_data;
 
-	printk(LOG_LEVEL "[deferred_ioctl] Command: %s\n", ioctl_command_to_string(cmd));
+	pr_info("[deferred_ioctl] Command: %s\n", ioctl_command_to_string(cmd));
 
 	switch (cmd) {
 		case MY_IOCTL_TIMER_SET:
+			/* TODO 2: set flag */
 			my_data->flag = TIMER_TYPE_SET;
+			/* TODO 1: schedule timer */
 			mod_timer(&my_data->timer, jiffies + arg * HZ);
 			break;
 		case MY_IOCTL_TIMER_CANCEL:
+			/* TODO 1: cancel timer */
 			del_timer(&my_data->timer);
 			break;
 		case MY_IOCTL_TIMER_ALLOC:
+			/* TODO 2/2: set flag and schedule timer */
 			my_data->flag = TIMER_TYPE_ALLOC;
 			mod_timer(&my_data->timer, jiffies + arg * HZ);
 			break;
-		case MY_IOCTL_TIMER_ACCT:
-			my_data->flag = TIMER_TYPE_ACCT;
+		case MY_IOCTL_TIMER_MON:
+		{
+			/* TODO 4/8: use get_proc() and add task to list */
+			struct mon_proc *p = get_proc(arg);
+			if (IS_ERR(p))
+				return PTR_ERR(p);
+
+			/* TODO 4: protect access to list */
+			spin_lock_bh(&my_data->lock);
+			list_add(&p->list, &my_data->list);
+			spin_unlock_bh(&my_data->lock);
+
+			/* TODO 4/2: set flag and schedule timer */
+			my_data->flag = TIMER_TYPE_MON;
 			mod_timer(&my_data->timer, jiffies + HZ);
 			break;
+		}
 		default:
 			return -ENOTTY;
 	}
 	return 0;
-}
-
-static ssize_t deferred_read(struct file *file, char __user *user_buffer,
-		size_t size, loff_t *offset)
-{
-	struct my_device_data *my_data =
-		(struct my_device_data *) file->private_data;
-	size_t to_read;
-
-	spin_lock_bh(&my_data->lock);
-	my_data->tmp_buf_idx = my_data->buf_idx;
-	memcpy(my_data->tmp_buf, my_data->buf, my_data->tmp_buf_idx * sizeof(unsigned long));
-	my_data->buf_idx = 0;
-	spin_unlock_bh(&my_data->lock);
-
-	if (size > my_data->tmp_buf_idx * sizeof(unsigned long) - *offset)
-		to_read = my_data->tmp_buf_idx * sizeof(unsigned long) - *offset;
-	else
-		to_read = size;
-	if (copy_to_user(user_buffer, my_data->tmp_buf + *offset, to_read) != 0)
-		return -EFAULT;
-	*offset += to_read;
-
-	return to_read;
 }
 
 struct file_operations my_fops = {
@@ -156,33 +200,32 @@ struct file_operations my_fops = {
 	.open = deferred_open,
 	.release = deferred_release,
 	.unlocked_ioctl = deferred_ioctl,
-	.read = deferred_read
 };
 
 static int deferred_init(void)
 {
 	int err;
 
-	printk(LOG_LEVEL "[deferred_init] Init module\n");
+	pr_info("[deferred_init] Init module\n");
 	err = register_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR), 1, MODULE_NAME);
 	if (err) {
-		printk(LOG_LEVEL "[deffered_init] register_chrdev_region: %d\n", err);
+		pr_info("[deffered_init] register_chrdev_region: %d\n", err);
 		return err;
 	}
 
+	/* TODO 2: Initialize flag. */
 	dev.flag = TIMER_TYPE_NONE;
+	/* TODO 3: Initialize work. */
 	INIT_WORK(&dev.work, work_handler);
 
-	memset(dev.buf, 0, sizeof(dev.buf));
-	memset(dev.tmp_buf, 0, sizeof(dev.tmp_buf));
-	dev.buf_idx = 0;
-	dev.tmp_buf_idx = 0;
-
+	/* TODO 4/5: Initialize lock and list. */
 	spin_lock_init(&dev.lock);
+	INIT_LIST_HEAD(&dev.list);
 
 	cdev_init(&dev.cdev, &my_fops);
 	cdev_add(&dev.cdev, MKDEV(MY_MAJOR, MY_MINOR), 1);
 
+	/* TODO 1: Initialize timer. */
 	setup_timer(&dev.timer, timer_handler, (unsigned long) &dev);
 
 	return 0;
@@ -190,14 +233,27 @@ static int deferred_init(void)
 
 static void deferred_exit(void)
 {
-	printk(LOG_LEVEL "[deferred_exit] Exit module\n" );
+	struct mon_proc *p, *n;
+
+	pr_info("[deferred_exit] Exit module\n" );
 
 	cdev_del(&dev.cdev);
 	unregister_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR), 1);
 
+	/* TODO 1: Cleanup: make sure the timer is not running after exiting. */
 	del_timer_sync(&dev.timer);
-
+	/* TODO 3: Cleanup: make sure the work handler is not scheduled. */
 	flush_scheduled_work();
+
+	/* TODO 4/8: Cleanup the monitered process list */
+	list_for_each_entry_safe(p, n, &dev.list, list) {
+		/* TODO 4: ... decrement task usage counter ... */
+		/* TODO 4: ... remove it from the list ... */
+		/* TODO 4: ... free the struct mon_proc */
+		put_task_struct(p->task);
+		list_del(&p->list);
+		kfree(p);
+	}
 }
 
 module_init(deferred_init);

@@ -30,8 +30,7 @@ void usage()
 			"\ts <seconds> - set timer to run after <seconds> seconds\n"
 			"\tc           - cancel timer\n"
 			"\ta <seconds> - allocate memory after <seconds> seconds\n"
-			"\tt           - account involuntary context switches\n"
-			"\tr           - read account data from device\n"
+			"\tp <pid>     - monitor pid\n"
 			"\n");
 	exit(1);
 }
@@ -41,10 +40,7 @@ void usage()
 int main(int argc, char **argv)
 {
 	int fd;
-	unsigned long seconds;
-	unsigned long buffer[BUFFER_LEN];
-	size_t i;
-	ssize_t n;
+	unsigned long seconds, pid;
 
 	if (argc < 2)
 		usage();
@@ -78,23 +74,14 @@ int main(int argc, char **argv)
 		if (ioctl(fd, MY_IOCTL_TIMER_ALLOC, seconds) < 0)
 			error("ioctl allocate memory error");
 		break;
-	case 't':
-		/* Account for involuntary context switches. */
-		if (argc < 2)
+	case 'p':
+		/* Monitor pid. */
+		if (argc < 3)
 			usage();
-		printf("Account for involuntary context switches.\n");
-		if (ioctl(fd, MY_IOCTL_TIMER_ACCT) < 0)
-			error("ioctl account context switches error");
-		break;
-	case 'r':
-		/* Read accounting data from device. */
-		n = read(fd, buffer, sizeof(buffer));
-		if (n < 0)
-			error("read from device error");
-		printf("data read: [ ");
-		for (i = 0; i < n / sizeof(buffer[0]); i++)
-			printf("%lu ", buffer[i]);
-		printf("]\n");
+		pid = atoi(argv[2]);
+		printf("Monitor PID %lu.\n", pid);
+		if (ioctl(fd, MY_IOCTL_TIMER_MON, pid) < 0)
+			error("ioctl monitor pid error");
 		break;
 	default:
 		error("Wrong parameter");
