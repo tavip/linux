@@ -19,15 +19,19 @@ for d in args.dirs:
 		except:
 			pass
 		if name == "Kbuild":
-			pattern="(#\s*TODO)([0-9]*)\/?([0-9]*)(.*)"
+			pattern="(^#\s*TODO)([0-9]*)\/?([0-9]*)(:.*)"
 		else:
-			pattern="(\s*/\*\s*TODO)([0-9]*)/?([0-9]*)(.*)"
+			pattern="(.*/\*\s*TODO)([ 0-9]*)/?([0-9]*)(:.*)"
 		f = open(p)
 		g = open(os.path.join(args.output, p), "w")
 		skip_lines = 0
 		for l in f.readlines():
 			if skip_lines > 0:
 				skip_lines -= 1
+				m = re.search(pattern, l)
+				if m :
+					l = "%s%s%s\n" % (m.group(1), m.group(2), m.group(4))
+					g.write(l)
 				continue
 			m = re.search(pattern, l)
 			if m:
