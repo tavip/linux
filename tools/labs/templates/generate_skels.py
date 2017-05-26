@@ -9,7 +9,9 @@ parser.add_argument('--todo', type=int, help='don\'t remove TODOs less then this
 args = parser.parse_args()
 
 for d in args.dirs:
-	paths = glob.glob(d + "/*")
+	paths = glob.glob(d + "/*.c")
+	paths += glob.glob(d + "/*.h")
+	paths += glob.glob(d + "/Kbuild")
 	for p in paths:
 		name=os.path.basename(p)
 		try:
@@ -31,7 +33,7 @@ for d in args.dirs:
 			if m:
 				todo=1
 				if m.group(2):
-					todo = m.group(2)
+					todo = int(m.group(2))
 				if todo >= args.todo:
 					if m.group(3):
 						skip_lines = int(m.group(3))
