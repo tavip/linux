@@ -55,6 +55,7 @@ $(BUILDDIR)/lirc.h.rst: ${UAPI}/lirc.h ${PARSER} $(SRC_DIR)/lirc.h.rst.exception
 
 all: $(IMGDOT) $(BUILDDIR) ${TARGETS}
 html: all
+slides: all
 epub: all
 xml: all
 latex: $(IMGPDF) all

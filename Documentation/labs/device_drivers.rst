@@ -1,6 +1,9 @@
 Character device drivers
 ========================
 
+.. slideconf::
+   :theme: single-level
+
 Laboratory objectives
 ---------------------
 

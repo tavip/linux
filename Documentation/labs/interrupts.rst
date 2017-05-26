@@ -2,6 +2,8 @@
 I/O access and Interrupts
 ==========================
 
+.. slideconf::
+   :theme: single-level
 
 Lab objectives
 ==============

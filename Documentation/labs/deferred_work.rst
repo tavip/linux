@@ -2,6 +2,9 @@
 Deferred work
 =============
 
+.. slideconf::
+   :theme: single-level
+
 Lab objectives
 ==============
 

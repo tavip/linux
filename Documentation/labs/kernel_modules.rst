@@ -1,6 +1,9 @@
 Kernel modules
 ==============
 
+.. slideconf::
+   :theme: single-level
+
 Overview
 --------
 

@@ -2,6 +2,9 @@
 Memory mapping
 ==============
 
+.. slideconf::
+   :theme: single-level
+
 Lab objectives
 ==============
 
