@@ -56,9 +56,9 @@ because of that there is a separate zone in kernel-space called
 highmem which can be used to arbitrarily map physical memory.
 
 .. note:: Memory allocated by :c:func:`kmalloc` resides in lowmem and
-          it is physically contiguous. Memory allocated with
-          :c:func:`vmalloc` is not contiguous and does not reside in
-          lowmem (it has a dedicated zone in kernel space).
+	  it is physically contiguous. Memory allocated with
+	  :c:func:`vmalloc` is not contiguous and does not reside in
+	  lowmem (it has a dedicated zone in kernel space).
 
 Memory Structures
 -----------------
@@ -90,7 +90,7 @@ There are many functions that interact with this structure:
   used to directly reference the page
 
 :c:type:`struct vm_area_struct`
--------------------------------     
+-------------------------------
 
 :c:type:`struct vm_area_struct` holds information about a contiguous
 virtual memory area. The memory areas of a process can be viewed by
@@ -130,7 +130,7 @@ vm_area_struct`. The most important fields of this structure are:
 
 
 :c:type:`struct mm_struct`
---------------------------    
+--------------------------
 
 :c:type:`struct mm_struct` encompasses all memory areas associated
 with a process. The *mm* field of :c:type:`struct task_struct` is a
@@ -179,7 +179,7 @@ into the virtual space represented by :c:type:`vm_area_struct`:
 .. code-block:: c
 
    int remap_pfn_range (structure vm_area_struct * vma, unsigned long addr,
-		        unsigned long pfn, unsigned long size, pgprot_t prot);
+			unsigned long pfn, unsigned long size, pgprot_t prot);
 
 :c:func:`remap_pfn_range` expects the following parameters:
 
@@ -188,7 +188,7 @@ into the virtual space represented by :c:type:`vm_area_struct`:
   tables for the virtual address space between addr and addr + size
   will be formed as needed
 * *pfn* the page frame number to which the virtual address should be
-  mapped 
+  mapped
 * size - the size (in bytes) of the memory to be mapped
 * prot - protection flags for this mapping
 
@@ -197,9 +197,9 @@ physical memory starting at page frame number *pfn* (memory that was
 previously allocated) to the *vma->vm_start* virtual address:
 
 .. code-block:: c
-		
+
    struct vm_area_struct * vma;
-   unsigned long len = vma->vm_end - vma->vm_start;		
+   unsigned long len = vma->vm_end - vma->vm_start;
    int ret ;
 
    ret = remap_pfn_range(vma, vma->vm_start, pfn, len, vma->vm_page_prot);
@@ -207,7 +207,7 @@ previously allocated) to the *vma->vm_start* virtual address:
        pr_err("could not map the address area\n");
        return -EIO;
    }
-		
+
 
 To obtain the page frame number of the physical memory we must
 consider how the memory allocation was performed. For each
@@ -257,10 +257,10 @@ Enabling is done using :c:func:`SetPageReserved` while reseting it
        char *mem = kmalloc(PAGE_SIZE * npages);
 
        if (!mem)
-           return mem;
+	   return mem;
 
        for(i = 0; i < npages * PAGE_SIZE; i += PAGE_SIZE) {
-           SetPageReserved(virt_to_page(((unsigned long)mem) + i));
+	   SetPageReserved(virt_to_page(((unsigned long)mem) + i));
 
        return mem;
    }
@@ -268,9 +268,9 @@ Enabling is done using :c:func:`SetPageReserved` while reseting it
    void free_mmap_pages(void *mem, int npages)
    {
        int i;
-   
+
        for(i = 0; i < npages * PAGE_SIZE; i += PAGE_SIZE) {
-           ClearPageReserved(virt_to_page(((unsigned long)mem) + i));
+	   ClearPageReserved(virt_to_page(((unsigned long)mem) + i));
 
        kfree(mem);
    }
@@ -283,3 +283,192 @@ Further reading
 * `Driver porting: supporting mmap () <http://lwn.net/Articles/28746/>`_
 * `Device Drivers Concluded <http://www.linuxjournal.com/article/1287>`_
 * `mmap <http://en.wikipedia.org/wiki/Mmap>`_
+
+Exercises
+=========
+
+Mapping contiguous physical memory to userspace
+------------------------------------------------
+
+Implement a device driver that maps contiguous physical memory
+(e.g. obtain via :c:func:`kmalloc`) to userspace.
+
+Review the `Device driver memory mapping`_ section, generate the
+skeleton for *memory_mapping/kmmap* and fill in areas marked with
+**TODO 1**.
+
+Start with allocating a NPAGES+2 memory area page using kmalloc in the
+module init function and find the first address in the area that is
+aligned to a page boundary.
+
+.. hint:: The size of a page is *PAGE_SIZE*.
+
+	  Store the allocated area in *kmalloc_ptr* and the page
+	  aligned address in *kmalloc_area*:
+
+	  Use :c:func:`PAGE_ALIGN` to determine *kmalloc_area*.
+
+Enable the PG_reserved bit of each page with
+:c:func:`SetPageReserved`. Clear the bit with
+:c:func:`ClearPageReserved` before freeing the memory.
+
+.. hint:: Use :c:func:`virt_to_page` to translate virtual pages into
+	  physical pages used as required by :c:func:`SetPageReserved`
+	  and :c:func:`ClearPageReserved`.
+
+For verification purpose (using the test below), fill in the first 4
+bytes of each page with the following values: 0xaa , 0xbb , 0xcc ,
+0xdd.
+
+Implement the mmap driver function.
+
+.. hint:: For mapping, use :c:func:`remap_pfn_range`.  The third
+	  argument for remap_pfn_range is a page number number (PFN)
+
+	  To convert from virtual kernel address to physical address,
+	  use :c:func:`virt_to_phys`.
+
+	  To convert a physical address to it's PFN shift the address
+	  with PAGE_SHIFT bits to the right.
+
+For testing, use *test/mmap-test*. If everything goes well the test
+will show "matched" messages.
+
+
+Mapping non-contiguous physical memory to userspace
+----------------------------------------------------
+
+Implement a device driver that maps non-contiguous physical memory
+(e.g. obtain via :c:func:`vmalloc`) to userspace.
+
+Review the `Device driver memory mapping`_ section, generate the
+skeleton for *memory_mapping/vmmap* and fill in areas marked with
+**TODO 1**.
+
+Allocate a memory area of NPAGES with :c:func:`vmalloc`.
+
+.. hint:: The size of a page is *PAGE_SIZE*.
+
+	  Store the allocated area in *vmalloc_area*:
+
+	  Memory allocated by :c:func:`vmalloc` is paged aligned.
+
+Enable the PG_reserved bit of each page with
+:c:func:`SetPageReserved`. Clear the bit with
+:c:func:`ClearPageReserved` before freeing the memory.
+
+.. hint:: Use :c:func:`vmalloc_to_page` to translate virtual pages
+	  into physical pages used as required by
+	  :c:func:`SetPageReserved` and :c:func:`ClearPageReserved`.
+
+For verification purpose (using the test below), fill in the first 4
+bytes of each page with the following values: 0xaa , 0xbb , 0xcc ,
+0xdd.
+
+Implement the mmap driver function.
+
+.. hint:: To convert from virtual vmalloc address to physical address,
+	  use :c:func:`vmalloc_to_pfn` which returns a PFN directly.
+
+.. attention:: vmalloc pages are not physically contiguous so it is
+	       needed to use :c:func:`remap_pfn_range` for each
+	       page.
+
+	       Loop through all virtual pages and for each:
+	       * determine the physical address
+	       * map it with :c:func:`remap_fpn_range`
+
+	       Make sure the that you determine the physical address
+	       each time and that you use a range of one page for
+	       mapping.
+
+For testing, use *test/mmap-test*. If everything goes well the test
+will show "matched" messages.
+
+Read / write operations in mapped memory
+----------------------------------------
+
+Modify one of the previous modules to allow read / write operations on
+your device. This is a didactic exercise to see that the same space
+can also be used with the mmap call and with read and write calls.
+
+Fill in areas marked with **TODO 2**.
+
+.. note:: The offset parameter sent to the read / write operation can
+	  be ignore as all reads / writes from the test program will
+	  be done with 0 offsets.
+
+For testing run *test/mmap-test* with 2 as parameter:
+
+.. code-block:: shell
+
+   root@qemux86:~# skels/memory_mapping/kmmap/mmap-test 2
+
+
+Display memory mapped in procfs
+-------------------------------
+
+Using one of the previous modules, create a procfs file in which you
+display the total memory mapped by the calling process.
+
+Fill in the areas marked with TODO 3.
+
+Create a new entry in procfs (PROC_ENTRY_NAME, defined in mmap-test.h)
+that will show the total memory mapped by the process that called the
+read on that file.
+
+.. hint:: Use :c:func:`proc_create`. For the mode parameter, use 0,
+	  and for the parent parameter use NULL. Use
+	  *my_proc_file_ops*  for operations.
+
+In the module exit function, delete the PROC_ENTRY_NAME entry using
+:c:func:`remove_proc_entry`.
+
+
+.. note:: A (complex) use and description of the :c:type:`struct
+	  seq_file` interface can be found here in this `example
+	  <http://tldp.org/LDP/lkmpg/2.6/html/x861.html>`_ .
+
+	  For this exercise, just a simple use of the interface
+	  described `here <http://lwn.net/Articles/22355/>`_ is
+	  sufficient. Check the "extra-simple" API described there.
+
+In the my_seq_show display my_seq_show you will need to:
+
+* Obtain the mm_struct structure of the current process using the
+  get_task_mm function.
+
+  .. hint:: The current process is available via the *current* macro
+
+* Iterate through the entire :c:type:`struct vm_area_struct` list
+  associated with the process.
+
+  .. hint:: Use the variable *vma_iterator* and start from
+	    *mm->mmap*. Use the *vm_next* field to navigate through
+	    the list of memory areas. Stop when you reach NULL.
+
+* Use *vm_start* and *vm_end* for each area to compute the total size
+
+* Use pr_info("%lx %lx\n, ... ) to print *vm_start* and *vm_end* for each area
+
+* To release :c:type:`struct mm_struct`, decrement the reference
+  counter of the structure using mmput
+
+* Use seq_printf to write to the file. Show only the total count, no
+  other messages. Do not even show newline (\n).
+
+In :c:func:`my_seq_open` register the display function
+(:c:func:`my_seq_show`) using :c:func:`single_open call`.
+
+.. note:: single_open can use NULL the third argument for single_open
+
+For testing run *test/mmap-test* with 3 as parameter:
+
+.. code-block:: shell
+
+   root@qemux86:~# skels/memory_mapping/kmmap/mmap-test 2
+
+.. note:: The test waits for a while (it has an internal sleep
+	  instruction). As long as the test waits, use the pmap
+	  command in another console to see the mappings of the test
+	  and compare it to the test results.
