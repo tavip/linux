@@ -1,0 +1,6 @@
+
+Se ruleaza:
+$ MALLOC_CHECK_=1 ./trim , si se observa ca se incearca eliberarea 
+unei zone de memorie de la o adresa care nu a fost intoarsa de malloc.
+
+

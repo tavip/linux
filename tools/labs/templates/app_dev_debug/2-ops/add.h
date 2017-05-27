@@ -1,0 +1,13 @@
+/**
+ * Application development and debugging lab
+ *
+ * Multiple source files compiling
+ * add.h - addition header file
+ */
+
+#ifndef _ADD_H
+#define _ADD_H
+
+int add(int a, int b);
+
+#endif
