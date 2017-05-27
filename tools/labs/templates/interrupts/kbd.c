@@ -111,7 +111,7 @@ static inline u8 i8042_read_data(void)
 	return val;
 }
 
-/* TODO 2/45: implement interrupt handler */
+/* TODO 2/25: implement interrupt handler */
 irqreturn_t kbd_interrupt_handle(int irq_no, void *dev_id)
 {
 
