@@ -1,0 +1,4 @@
+tftpboot 0x60008000 zImage
+tftpboot 0x61000000 vexpress-v2p-ca9.dtb
+setenv bootargs "root=/dev/mmcblk0 console=ttyAMA0"
+bootz 0x60008000 - 0x61000000

@@ -1,0 +1,4 @@
+ext4load mmc 0 0x60008000 /boot/zImage
+ext4load mmc 0 0x61000000 /boot/vexpress-v2p-ca9.dtb
+setenv bootargs "root=/dev/mmcblk0 console=ttyAMA0"
+bootz 0x60008000 - 0x61000000
