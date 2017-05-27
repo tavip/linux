@@ -873,14 +873,18 @@ from the skeleton.
 
 
 .. note:: There are two options for creating and running a thread:
+
 	  * :c:func:`kthread_run` to create and run the thread
+
 	  * :c:func:`kthread_create` to create a suspended thread and
 	    then start it running with :c:func:`wake_up_process`.
 
 	  Review the `Kernel threads` section if needed.
 
 .. attention:: Synchronize the thread termination with module unloading:
+
 	       * The thread should finish when the module in unloaded
+
 	       * Wait for the kernel thread to exit before continuing
 		 with with unloading
 
