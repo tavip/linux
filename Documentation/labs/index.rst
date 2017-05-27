@@ -18,7 +18,7 @@ driver topics. For each topic there are two parts:
    vm.rst
    exercises.rst
    kernel_modules.rst
-   kernel_api1.rst
+   kernel_api.rst
    device_drivers.rst
    interrupts.rst
    deferred_work.rst
