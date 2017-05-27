@@ -1008,178 +1008,195 @@ the example wget above we have:
         0.05%     wget  [kernel.kallsyms]  [k] native_write_msr_safe
 
 Exercises
----------
+=========
 
-Exercise 2 - Row / Column major order
-*************************************
-Using the perf_3.2 perf_3.2 we want to determine whether the C language is
-column-major or row-major (row-major-order).
+Exercise 1 - Compilation
+------------------------
 
-Enter the 2-major directory and fill the ``row.c`` so that it increments the
-elements of a matrix on lines, then fill out the columns.c so as to increment
-the elements of the matrix on columns.
+Go to 1-ops/ directory and examine content of ops.c, mul.c and add.c
+files. File ops.c, using the functions defined in mul.c and add.c 
+performs simple addition and multiplication operations.
 
-Determine the number of missed caches compared to the number of cached accesses
-using the perf stat to track the L1-dcache-load-misses . To see the available 
-events, use the perf list command. Use the -e option of the perf utility to
-specify a specific event to watch (see the perfcounters section ).
+Create file Makefile, so you get the source object files mul.o, add.o and
+ops.o and then link them to get ops executable. Check the result of addition
+and multiplication. Is it correct? Fix the issue.
 
-Exercise 3 - Busy
-*****************
+Stay in the directory -ops/ and use the options ``-D`` define the symbol
+HAVE_MATH when compiling the file ops.c. Obtain and run the executable ops. To
+use the pow function you must include file math.h and link libm library to the
+final executable using option -l of the gcc.
 
-Enter the 3-busy directory and inspect the busy.c file. Run the busy and 
-analyze system load using the sudo perf top command. What function does the 
-system seem to load?
+Exercise 2 - Printing order
+---------------------------
 
-Exercise 4 - Searching for a string
-***********************************
+Go to the ``2-print/`` directory and examine the contents of the ``print.c`` file.
+Use the ``make print`` command to compile the print program.
 
-Go to the 4-find-char/ directory and analyze the contents of the find-char.c.
-Compile the find-char.c char.c file and run the executable.
+   * Is there any ``Makefile``?
+   * What is the order in which console prints are made? Explain the output.
+   * Put a ``sleep(5)`` statement before ``return 0``, in the main function and use
+     the ``strace -e write ./print`` command to find the explanation.
 
-Identify using perf record and perf report what is the most time-consuming 
-processor and try to improve the performance of the program.
+Exercise 3 - Segmentation fault
+------------------------------------------------------
 
-Exercise 5 - Printing order
-***************************
+Got to 3-gdb/ directory and examine the source. The program should read a message
+from stdin and display it.
 
-Go to the 5-print/ browse directory and examine the contents of the print.c
-Use the make print command to compile the print program. Is there any Makefile?
+  * Compile and run the source.
+  * Run the program again using gdb (revisit running a program from gdb section).
 
-What is the order in which console writings are made? Explain the output.
+To identify exactly where the crash occured use ``backtrace`` command. For details on
+gdb commands use the command help:
 
-Put a sleep(5) statement before return 0; In the main function and use 
-the strace -e write ./print to find the explanation.
+.. code-block:: bash
 
-Exercise 6 - Flowers reloaded
-*****************************
+   (gdb) help
 
-Go to the 6-flowers/ folder and analyze the contents of the flowers.c.
+Change the current frame by frame of function main:
+
+.. code-block:: bash
+
+   (gdb) frame main
+
+Inspect the variable buf:
+
+.. code-block:: bash
+
+   (gdb) print buf
+
+Now we want to see why is ``buf = NULL``, following these steps:
+
+   * Kill the current process: ``(gdb)  kill``
+   * Set a breakpoint at the beginning of the function main:
+     ``(gdb) break main``
+   * run the program and inspect the value ``buf`` before and after the malloc
+     function call (use ``next`` to move to the next statement).
+   * explain the source of the error, then fix it.
+
+Exercise 4 - Valgrind, memory access
+-----------------------------------
+
+Go to the 4-flowers/ folder and analyze the contents of the flowers.c.
 Compile the flowers.c file and run the executable flowers. What happens? Use
 valgrind with the --tool=memcheck option. Show the value of the third element
 of the flowers array, flowers[2] .
 
-Exercise 7 - Buffer overflow exploit
-------------------------------------
+Exercise 5 - Valgrind, memory allocation
+----------------------------------------
 
-Go to the 7-exploit/ directory and analyze the contents of the exploit.c file. 
-Use the make command to compile the exploit executable. Identify a problem in 
-the read_name function.
+Go to 5-struct folder and analyze the contents of the struct.c file.
 
-Use gdb to investigate the stack before making the read call.
+The function allocate_flowers allocates memory for ``no`` elements of type
+flower_info, and function free_flowers release allocated memory from function
+allocate_flowers.
+   * Run the program. Did you notice any errors?
+   * Correct any errors. You can use --tool=memcheck option for valgrind.
 
-.. code-block:: bash
+Exercise 6 - Row / Column major order
+-------------------------------------
+Using the perf we want to determine whether the C language is
+column-major or row-major.
 
-   student@spook:~ gdb ./exploit
-   (gdb) break read_name
-   (gdb) run
-   # print the addresses of access and name vars
-   (gdb) print/x &access
-   (gdb) print/x &name
+Go to 6-major directory and fill the ``row.c`` so that it increments the
+elements of a matrix on lines, then fill out the columns.c so as to increment
+the elements of the matrix on columns.
 
-Notice that the difference between the address of the access variable and the
-name buffer is 0x10 (16) bytes, which means that the access variable is 
-immediately at the end of the data in the name buffer.
+Determine the number of missed caches compared to the number of cached accesses
+using the perf stat to track the ``L1-dcache-load-misses``. To see the available
+events, use the ``perf list`` command. Use the -e option of the perf utility to
+specify a specific event to watch (see the perfcounters section).
 
-Using your information, build a convenient input that you can give to the 
-exploit executable so that it displays the "Good job, you hacked me!" string.
+Exercise 7 - Busy
+-----------------
 
-To generate non-printable characters, you can use the Python interpreter: 
-python -c .
+Go to 7-busy directory and inspect the ``busy.c`` file. Run the ``busy`` program 
+and analyze system load using ``perf top`` command. What function does the
+system load seems to be?
 
-.. code-block:: bash
 
-  student@spook:~ python -c 'print "A"*8 + "\x01\x00\x00\x00"' | ./exploit
+Exercise 8 - Searching for a string
+-----------------------------------
 
-The above command will generate 8 bytes with the value 'A' (ASCII code 0x41),
-a byte with the value 0x01 and another 3 bytes with the value 0x00 and will
-provide it to the executable exploit stdin . Note that the data is structured 
-in small endian memory, so if the last 4 bytes will overwrite an address, it
-will be interpreted as 0x00000001, no 0x01000000.
+Go to the 8-find-char/ directory and analyze the contents of the find-char.c.
+Compile the find-char.c file and run the executable.
 
-Exercise 8 - Trace the mystery
-------------------------------
+Identify using perf record and perf report what is the most time-consuming 
+processor function and try to improve the performance of the program.
 
-Go to the 8-mystery/ undefined directory where you find the mystery executable.
-Investigate and explain what it is doing. Review the strace section.
-
-Exercise 3 - allocation, reallocation and dezalocarea memory
-------------------------------------------------------------
-
-Enter directory 3-alloc, compile and run alloc.
-Used ``valgrind`` to detect the working memory problems and correct them.
-
-Notice that generates leak sites of memory because the allocated memory was not
-released properly when the area was no longer required in the program.
-
-Review sections Valgrind and Memory allocation Linux lab.
-
-Exercise 4 - solving a problem Segmentation Fault type
-------------------------------------------------------
-
-Enter the directory 4-gdb and inspect source. The program should read a message
-from stdin and display it. Compile and run the source. Run the program again
-gdb(revisit running a program from gdb ).
-
-To identify exactly where crack use control program backtrace . For details on 
-gdb commands use the command help:
-
-(gdb)help
-
-Change the current frame by frame function main(review detecting an invalid 
-access type page foul ):
-
- (gdb ) frame main
-
-Inspect the variable buf:
-
- (gdb ) print buf
-
-Now we want to see what is buf = NULL, following these steps:
-
-    Kill the current process:
-
-     (gdb)  kill 
-
-    Set a breakpoint at the beginning of the function main:
-
-      (gdb) break main 
-
-    Run the program and inspect its value buf before and after the function call
-    malloc(use nextto move to the next statement without trace function call).
-    Explain the source of the error, then fix it. 
-
-Exercise 7 - Detection of working memory problems - mcheck (1p)
-
-The  7-trim reviewed the program trim.c, compile and run the executable 
-trim.
-
-Try to detect the problem using gdb (review the techniques used in year 3). 
-Then, use mcheck to detect the problem and correct it (see section mcheck 
-laboratory). Running with mcheckis as follows:
-
- MALLOC_CHECK_ = 1 . / trim
-
-Exercise 8 - Endianess (1p)
-
-Enter the directory 8-endianand inspect source endian.c. Using your variable 
-wdisplay your number n=0xDEADBEEF.
-
-What type of architecture is used? (big-endian or little-endian, see here for 
-details). Think nlike an array of characters.
 
 Exercise 9 - Working with the stack
 -----------------------------------
 
-Enter the directory 9-bad_stackand file review bad_stack.c. Compile and run.
-It is noted that the position main, in the first display strand the second time 
-there. Notice that after leaving their positions myfun () variable lab_sois no 
-longer accessible because it leaves the stack frame after the function myfun 
-return. The variable will be overwritten with other function calls. Myfun 
-function does not return an address (as required explicitly) but eax register 
-contains the 0x0 after return.
+Go to 9-bad-stack/ directory and examine bad_stack.c file. Compile and run the program.
+Notice that in the main function the first print of str is correct but the second time
+it isnt't. Can you explain why? Modify the source code such that the ``lab_so`` variable
+could be accessible after function return.
 
-What types of variables that are not on the stack?
+Exercise 10 - Endianess
+-----------------------
 
-Change source, namely function myfun()so variable lab_so be accessible after 
-return.
+Go to 10-endian/ directory and inspect endian.c source file. Make use of ``w`` variable
+to print each byte of the number ``0xDEADBEEF``.
+
+What type of architecture are you running on? (big-endian or little-endian, see here for details).
+
+Exercise 11 - mcheck
+--------------------
+
+Go to 11-trim/ directory and inspect the trim.c program, compile and run the executable
+``trim``.
+
+Try to detect the problem using gdb. Then, use mcheck to detect the problem and correct 
+it (see section mcheck laboratory).  Run mcheck as follows:
+
+.. code-block:: bash
+
+   MALLOC_CHECK_=1 ./trim
+
+..
+   Exercise 7 - Buffer overflow exploit
+   ------------------------------------
+   
+   Go to the 7-exploit/ directory and analyze the contents of the exploit.c file. 
+   Use the make command to compile the exploit executable. Identify a problem in 
+   the read_name function.
+   
+   Use gdb to investigate the stack before making the read call.
+   
+   .. code-block:: bash
+   
+      student@spook:~ gdb ./exploit
+      (gdb) break read_name
+      (gdb) run
+      # print the addresses of access and name vars
+      (gdb) print/x &access
+      (gdb) print/x &name
+   
+   Notice that the difference between the address of the access variable and the
+   name buffer is 0x10 (16) bytes, which means that the access variable is 
+   immediately at the end of the data in the name buffer.
+   
+   Using your information, build a convenient input that you can give to the 
+   exploit executable so that it displays the "Good job, you hacked me!" string.
+   
+   To generate non-printable characters, you can use the Python interpreter: 
+   python -c .
+   
+   .. code-block:: bash
+   
+     student@spook:~ python -c 'print "A"*8 + "\x01\x00\x00\x00"' | ./exploit
+   
+   The above command will generate 8 bytes with the value 'A' (ASCII code 0x41),
+   a byte with the value 0x01 and another 3 bytes with the value 0x00 and will
+   provide it to the executable exploit stdin . Note that the data is structured 
+   in small endian memory, so if the last 4 bytes will overwrite an address, it
+   will be interpreted as 0x00000001, no 0x01000000.
+   
+   Exercise 8 - Trace the mystery
+   ------------------------------
+   
+   Go to the 8-mystery/ undefined directory where you find the mystery executable.
+   Investigate and explain what it is doing. Review the strace section.
+   
+   
