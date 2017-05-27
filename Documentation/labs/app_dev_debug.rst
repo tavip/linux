@@ -8,9 +8,9 @@ Application development
 GCC
 ---
 
-GCC is the default compiler suite on most Linux distributions.
+``GCC`` is the default compiler suite on most Linux distributions.
 We'll use a simple program that prints a string of characters to the standard
-output to demonstrate gcc usage.
+output to demonstrate ``gcc`` usage.
 
 .. code-block:: c
 
@@ -24,8 +24,8 @@ output to demonstrate gcc usage.
           return 0;
     }
 
-GCC uses the ``gcc`` command to compile C programs. A typical invocation is for
-compiling a program from a single source file, in our case hello.c .
+``GCC`` uses the ``gcc`` command to compile C programs. A typical invocation is for
+compiling a program from a single source file, in our case ``hello.c``.
 
 .. code-block:: bash
 
@@ -48,33 +48,35 @@ compiling a program from a single source file, in our case hello.c .
    SO, ... hello world!
 
 
-Therefore, the gcc hello.c command was used to compile the hello.c source file.
-The result was the executable file a.out (default name used by gcc ). If you
+Therefore, the ``gcc hello.c`` command was used to compile the ``hello.c`` source file.
+The result was the executable file ``a.out`` (default name used by gcc ). If you
 want to get an executable with a different name, you can use the -o option.
+
 Phases of compilation
+~~~~~~~~~~~~~~~~~~~~~
 
 Compilation refers to obtaining an executable file from a source file. As we
 saw in the previous paragraph, the gcc command resulted in the ``hello`` executable
 from the hello.c source file. Internally, gcc goes through several
 processing phases of the source file until the executable is obtained. These
-phases are highlighted in the diagram below: compilation phases
-options
+phases are highlighted in the diagram below.
+
+.. image:: re.png
+   :align: center
 
 By default, gcc creates an executable from a source file. Using
 various options, we can stop compiling at one of the intermediate phases as 
 follows:
 
-
-   * ``-E`` - only preprocess the source file
-        gcc -E hello.c - will generate the preprocessed file that will default 
-        to the standard output. 
-   * ``-S`` - the compilation phase is performed
-        gcc -S hello.c - will generate the file in assembly language hello.s 
-   * ``-c`` - the assembly phase is carried out as well
-        gcc -c hello.c - will generate the hello.o object file 
+   * ``-E``, only preprocess the source file
+     ``gcc -E hello.c``, will generate the preprocessed file that will default
+     to the standard output. 
+   * ``-S``, the compilation phase is performed
+     ``gcc -S hello.c``, will generate the file in assembly language ``hello.s``
+   * ``-c``, the assembly phase is carried out as well
+     ``gcc -c hello.c``, will generate the ``hello.o`` object file 
 
 The above options can be combined with -o to specify the output file.
-preprocessing
 
 Compiling from multiple files
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -85,7 +87,7 @@ hard to maintain and difficult to expand. In this regard, the application is
 written in several source files called modules. A module typically contains functions
 that play a common role.
 
-The following files are used to support how to compile a program from multiple source files:
+The following files are used to demonstrate how to compile a program from multiple source files:
 
 .. code-block:: c
 
@@ -136,9 +138,9 @@ The following files are used to support how to compile a program from multiple s
     }
 
 In the above program, main function calls f1 and f2 to display various information.
-To compile them all C files are sent as arguments to gcc :
+To compile them all C files are sent as arguments to gcc:
 
-.. code-block:: c
+.. code-block:: bash
 
    so@spook$ ls
    f1.c  f2.c  main.c  util.h
@@ -160,7 +162,7 @@ into the executable at the time of the link-editing.
 Generally, to get a multiple-source executable, it's customary to compile each source
 to the object mode and then link-editing them:
 
-.. code-block:: c
+.. code-block:: bash
 
    so@spook$ ls
    f1.c  f2.c  main.c  util.h
@@ -178,26 +180,27 @@ to the object mode and then link-editing them:
 
 Note that the executable main is obtained by linking the object modules. This
 approach has the advantage of efficiency. If the source file f2.c changes, then
-it will only need to be compiled and re-edited. If a direct executable had been
-obtained from sources then all three files would be compiled and then re-edited
-the link-editing. The time consumed would be much higher, especially during the
-development phase when the compilation phases are frequent, and only modified
-source files are being compiled.
+it will only need to be compiled and re-linked. If a direct executable had been
+obtained from sources then all three files would be compiled and then linked.
+The time consumed would be much higher, especially during the development phase
+when the compilation phases are frequent, and only modified source files are
+being compiled.
 
 Decreasing development time by compiling only the sources that have been
 modified is the basic motivation for the existence of automation tools such as
 make.
 
-
 GNU Make
 --------
 
-Make is a utility that allows automation and efficiency of tasks. It is 
-especially used to automate program compilation. As has been said, it is 
-inefficient to compile each file of each file and then link-editing to get an 
-executable from multiple sources. Each file is compiled separately, and only 
+Make is a utility that allows automation and efficiency of tasks. It is
+especially used to automate program compilation. As has been said, it is
+inefficient to compile each file of each file and then link-editing to get an
+executable from multiple sources. Each file is compiled separately, and only
 one modified file will be recompiled.
+
 Simple example of Makefile
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The make utility uses a configuration file called ``Makefile``. Such a file
 contains rules and automation commands.
@@ -229,28 +232,31 @@ The example above contains two rules: all and clean. When executing the make
 command, the first rule in Makefile is executed (in this case all, no matter
 the name). The executed command is ``gcc -Wall hello.c -o hello``. You can
 explicitly specify which rule to execute by submitting as a make command.
-(make clean to delete the hello executable and make all to get that executable 
-again).
+(``make clean`` to delete the hello executable and ``make all`` to get that
+executable again).
 
 By default, GNU Make searches the GNUmakefile, Makefile, makefile files and 
 analyzes them in order. To specify which Makefile file to analyze, use the -f 
-option. Thus, in the example below, we use the Makefile.ex1 file:
+option.
+
+.. image:: make.png
+   :align: center
 
 The following is a syntax of a rule from a Makefile file:
 
     * ``target`` - is usually the file that will be obtained by running the command 
       command. As noted in the previous example, it may be a virtual target that does 
       not have a file associated with it.
-    * prerequisites - represent the dependencies required to follow the rule; 
-     Usually are files required to achieve the target.
+    * ``prerequisites`` - represent the dependencies required to follow the rule; 
+      Usually are files required to achieve the target.
     * ``<Tab>`` - represents the tab character and must be used before the order is 
-     specified.
+      specified.
     * ``command`` - a list of commands (none, one, any) run when the target is 
       reached. 
 
 An example for a Makefile file is:
 
-.. code:: block
+.. code-block:: bash
 
     # Makefile.ex2
 
@@ -285,12 +291,12 @@ associated process ends.
 
 The most common options for strace are:
 
-   * ``-f``, this option will be followed and child processes created by the
+   * ``-f``, this option will instruct strace to also follow child processes created by the
      current process
    * ``-o filename``, by default strace displays the information to the stderr,
-     with this option, the output will be put in the filename file
+     with this option, the output will be put in the ``filename`` file
    * ``-p pid``, the pid of the tracking process.
-   * ``-e expression``, changes the calls you are looking for.
+   * ``-e expression``, changes the system calls you are looking for (e.g ``-e open``)
 
 .. code-block:: bash
 
@@ -357,9 +363,9 @@ to debug the program:
    13              *bug=f(1, 2);
    (gdb)
 
-The first command you use is run . This command will start running the program. 
-If this command receives arguments from the user, they will be sent to the 
-program. Before going to the basic commands in gdb, let's demonstrate how to 
+The first command you use is run. This command will start running the program.
+If this command receives arguments from the user, they will be sent to the
+program. Before going to the basic commands in gdb, let's demonstrate how to
 troubleshoot a program using the core file:
 
 .. code-block:: bash
@@ -382,13 +388,12 @@ Some of the basic commands in gdb are:
 
    * ``b[reakpoint]`` - Receives as argument a function name (ex: main), a line
      number, and possibly a file (eg: ``break source.c: 50``), a function
-     (``b source.c: my_function``) or an  address (ex: ``breakpoint *0x80483d3).
+     (``b source.c: my_function``) or an  address (ex: ``breakpoint *0x80483d3``).
    * ``n[ext]`` - will continue executing the program until the next line in the
      source code is reached. If the line to execute contains a function call, the 
-
      function will be executed completely.
-   * ``s[tep] - if you want to inspect the functions.
-   * ``fin[ish]`` - if you want to exit the current function. 
+   * ``s[tep]`` - if you want to inspect the functions.
+   * ``fin[ish]`` - if you want to exit the current function.
 
 The use of these commands is exemplified below:
 
@@ -530,18 +535,18 @@ Working with memory
 ===================
 
 Working with heap is one of the main causes of programming problems. Working
-with pointers, the need to use system/library calls for assignment/assignment
+with pointers, the need to use system/library calls for allocating/freeing memory
 can lead to a number of issues that affect (often fatal) the operation of a
 program.
 
 The most common problems with memory are:
 
   * invalid access to memory - which prevents access to areas that have not
-    been allocated or have been released.
+    been allocated or have been freed.
   * memory leaks - situations where the reference to a previously assigned area
     is lost. That area will remain busy until the process ends. 
 
-Both issues and utilities that can be used to combat them will be presented 
+Both issues and utilities that can be used to combat memory problems will be presented 
 below.
 
 mcheck - check the heap consistency
@@ -554,8 +559,8 @@ checks such as writing over a block assigned to malloc .
 Alternatively, you can use the -lmcheck option to link the program without
 affecting its source.
 
-The simplest option is to use the MALLOC_CHECK_ environment MALLOC_CHECK. If
-a program will be executed with the configured MALLOC_CHECK_ variable, then
+The simplest option is to use the ``MALLOC_CHECK_`` environment variable. If
+a program will be executed with the configured ``MALLOC_CHECK_`` variable, then
 error messages will be displayed (eventually the program will be aborted).
 
 The following is an example of a code with problems in allocating and using the 
@@ -595,15 +600,15 @@ heap:
         return 0;
     }
 
-Below you can see how the program is compiled and run. First, it runs without 
-mcheck options, and then defines the MALLOC_CHECK_ environment variable when 
+Below you can see how the program is compiled and run. First, it runs without
+mcheck options, and then defines the ``MALLOC_CHECK_`` environment variable when 
 running the program. It is noted that although the space allocated for vector 
 v1 is exceeded and the vector is referenced after the space is released, a 
 simple run does not result in the display of any error.
 
-However, if we define the MALLOC_CHECK_ environment MALLOC_CHECK_ , the two 
+However, if we define the ``MALLOC_CHECK_`` environment variable , the two 
 errors are detected. Note that an error is detected only at the time of a new 
-memory call intercepted by mcheck.
+memory call intercepted by ``mcheck``.
 
 .. code-block:: bash
 
@@ -615,8 +620,8 @@ memory call intercepted by mcheck.
     *** glibc detected *** ./mcheck_test: free(): invalid pointer: 0x0000000000601010 ***
     *** glibc detected *** ./mcheck_test: malloc: top chunk is corrupt: 0x0000000000601020 ***
 
-Mcheck is not a complete solution and does not detect any errors that may occur 
-in memory handling. It detects, however, a significant number of errors and is 
+Mcheck is not a complete solution and does not detect any errors that may occur
+in memory handling. It detects, however, a significant number of errors and is
 an important feature of glibc.
 
 Memory leaks
@@ -624,27 +629,27 @@ Memory leaks
 
 A memory leak occurs in two situations:
    
-   * a program fails to release a memory area
-   * a program loses the reference to a allocated memory area and as a
+   * a program fails to free a memory area
+   * a program loses the reference to an allocated memory area and as a
      consequence can not release it
 
 Memory leaks have the effect of reducing the amount of memory in the system.
-Extreme situations can result in consuming the entire memory of the system and 
+Extreme situations can result in consuming the entire memory of the system and
 the inability to run its various applications.
 
-As with the problem of invalid access to memory, the Valgrind utility is very 
+As with the problem of invalid access to memory, the Valgrind utility is very
 useful in detecting program memory leaks.
 
 Valgrind
 --------
 
-Valgrind is a suite of utilities used for debugging and profiling. The most 
+Valgrind is a suite of utilities used for debugging and profiling. The most
 popular is ``memcheck``, a utility that detects memory errors (invalid access,
 memory leaks, etc.). Other utilities in the Valgrind suite are cachegrind,
-Callgrind useful for profiling or Helgrind, useful for debugging multithreaded 
+Callgrind useful for profiling or Helgrind, useful for debugging multithreaded
 programs.
 
-Next, we will only refer to the Memcheck memory error detection tool. 
+Next, we will only refer to the memcheck memory error detection tool.
 Specifically, this utility detects the following types of errors:
 
   * using uninitialized memory
@@ -654,14 +659,14 @@ Specifically, this utility detects the following types of errors:
   * memory leaks
   * inappropriate use of malloc / new and free / delete calls 
 
-Valgrind does not require the code of a program to be adjusted, but uses the 
+Valgrind does not require the code of a program to be modified, but uses the
 executable (binary) associated with a program directly. On a regular run,
-Valgrind will get the argument - --tool to specify the utility used and the 
+Valgrind will get the argument - --tool to specify the utility used and the
 program that will be checked for memory errors.
 
 In the example below, the program presented in the "mcheck" section is used :
 
-.. code-block:: bash
+.. code-block:: none
 
     so@spook$ valgrind --tool=memcheck ./mcheck_test
     ==17870== Memcheck, a memory error detector.
@@ -699,12 +704,12 @@ In the example below, the program presented in the "mcheck" section is used :
     ==17870== Rerun with --leak-check=full to see details of leaked memory.
 
 
-Used utility ``memcheck`` for obtaining information memory access.
+We used the ``memcheck`` tool of valgrind for obtaining information about memory access.
 
-The recommended option ``-g`` when compiling the executable program to include
-debugging information. The running of the above identified Valgrind two errors: 
-a code appears in line 17 and line 10 is related to (malloc), while the other
-appears in line 22 and is coupled to the line 19 (free)
+It is recommended to use option ``-g`` when compiling the executable program to include
+debugging information. Running the above program, valgrind identified two errors:
+a coding error appears in line 17 and line 10 and is related to (malloc), while the other
+appears in line 22 and is coupled to the line 19 (free).
 
 .. code-block:: c
 
@@ -761,8 +766,8 @@ The following example is a program with a variety of memory allocation errors:
 The following are executable behavior obtained from a normal running and a run 
 under Valgrind:
 
-.. code-block:: bash
-   
+.. code-block:: none
+
     so@spook$ make
     cc -Wall -g    valgrind_test.c   -o valgrind_test
     so@spook$ ./valgrind_test 
@@ -806,7 +811,7 @@ under Valgrind:
 
 
 It can be seen that a regular running program does not generate any error.
-However, running with Valgrind, errors in three contexts:
+However, running with Valgrind, there are errors in three contexts:
 
    * call strcat(line 10) string is not initialized
    * write memory after free(line 20: p[1] = 'a')
@@ -834,9 +839,9 @@ perfcounters
 ------------
 
 Most modern processors offer performance counters that track different types of
-hardware events: executed instructions, cache-misses, missed missed
+hardware events: executed instructions, cache-misses, branch predictions
 instructions, without affecting the performance of the kernel or applications.
-These registers can trigger interruptions when a certain number of events
+These registers can trigger interrupts when a certain number of events
 accumulate and so can be used to analyze the code running on the processor in
 question.
 
@@ -851,7 +856,7 @@ The perfcounters subsystem
 perf
 ----
 
-The ``perf`` utility is the user interface perfcounters subsystem. It provides a
+The ``perf`` utility is the user interface with perfcounters subsystem. It provides a
 git like command line and does not require the existence of a daemon.
 
 Usage:
@@ -901,11 +906,13 @@ Displays the symbolic names of all types of events that can be tracked by perf .
      syscalls:sys_exit_accept                   [Tracepoint event]
    
 
-perf state
-~~~~~~~~~~
+perf stat
+~~~~~~~~~
 
-Run an order and display the statistics posted by the performance counters 
+Runs a command and displays the statistics posted by the performance counters 
 subsystem.
+
+.. code-block:: bash
 
    $ perf stat ls -R /usr/src/linux
     Performance counter stats for 'ls -R /usr/src/linux':
@@ -946,7 +953,7 @@ Note the most important events listed above.
 perf top
 ~~~~~~~~
 
-Generates and displays real-time information about uploading a system.
+Generates and displays real-time information about a system load.
 
 .. code-block:: bash
 
@@ -969,7 +976,7 @@ Generates and displays real-time information about uploading a system.
                   40.00  2.3% dput                 [kernel.kallsyms]  
                   39.00  2.3% ext3_check_dir_entry [kernel.kallsyms]  
 
-We note that file-handling functions (iterate, find) are the ones that most 
+We notice that file-handling functions (iterate, find) are the ones that most 
 often appear in the perf-top output of the recursive home directory command.
 
 perf record
@@ -1017,11 +1024,11 @@ Go to 1-ops/ directory and examine content of ops.c, mul.c and add.c
 files. File ops.c, using the functions defined in mul.c and add.c 
 performs simple addition and multiplication operations.
 
-Create file Makefile, so you get the source object files mul.o, add.o and
+Create Makefile, so you get the source object files mul.o, add.o and
 ops.o and then link them to get ops executable. Check the result of addition
 and multiplication. Is it correct? Fix the issue.
 
-Stay in the directory -ops/ and use the options ``-D`` define the symbol
+Stay in the directory 1-ops/ and using the option ``-D`` define the symbol
 HAVE_MATH when compiling the file ops.c. Obtain and run the executable ops. To
 use the pow function you must include file math.h and link libm library to the
 final executable using option -l of the gcc.
@@ -1075,10 +1082,10 @@ Now we want to see why is ``buf = NULL``, following these steps:
    * explain the source of the error, then fix it.
 
 Exercise 4 - Valgrind, memory access
------------------------------------
+------------------------------------
 
 Go to the 4-flowers/ folder and analyze the contents of the flowers.c.
-Compile the flowers.c file and run the executable flowers. What happens? Use
+Compile the ``flowers.c`` file and run the executable flowers. What happens? Use
 valgrind with the --tool=memcheck option. Show the value of the third element
 of the flowers array, flowers[2] .
 
@@ -1090,6 +1097,7 @@ Go to 5-struct folder and analyze the contents of the struct.c file.
 The function allocate_flowers allocates memory for ``no`` elements of type
 flower_info, and function free_flowers release allocated memory from function
 allocate_flowers.
+
    * Run the program. Did you notice any errors?
    * Correct any errors. You can use --tool=memcheck option for valgrind.
 
@@ -1098,7 +1106,7 @@ Exercise 6 - Row / Column major order
 Using the perf we want to determine whether the C language is
 column-major or row-major.
 
-Go to 6-major directory and fill the ``row.c`` so that it increments the
+Go to ``6-major/`` directory and fill the ``row.c`` so that it increments the
 elements of a matrix on lines, then fill out the columns.c so as to increment
 the elements of the matrix on columns.
 
@@ -1114,14 +1122,13 @@ Go to 7-busy directory and inspect the ``busy.c`` file. Run the ``busy`` program
 and analyze system load using ``perf top`` command. What function does the
 system load seems to be?
 
-
 Exercise 8 - Searching for a string
 -----------------------------------
 
 Go to the 8-find-char/ directory and analyze the contents of the find-char.c.
 Compile the find-char.c file and run the executable.
 
-Identify using perf record and perf report what is the most time-consuming 
+Identify using perf record and perf report what is the most time-consuming
 processor function and try to improve the performance of the program.
 
 
