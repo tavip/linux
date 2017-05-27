@@ -53,11 +53,11 @@ static int my_release(struct inode *inode, struct file *filp)
 static int my_read(struct file *file, char __user *user_buffer,
 		size_t size, loff_t *offset)
 {
-	/* TODO3: check size doesn't exceed our mapped area size */
+	/* TODO 2/2: check size doesn't exceed our mapped area size */
 	if (size > NPAGES * PAGE_SIZE)
 		size = NPAGES * PAGE_SIZE;
 
-	/* TODO3: copy from mapped area to user buffer */
+	/* TODO 2/2: copy from mapped area to user buffer */
 	if (copy_to_user(user_buffer, kmalloc_area, size))
 		return -EFAULT;
 
@@ -67,11 +67,11 @@ static int my_read(struct file *file, char __user *user_buffer,
 static int my_write(struct file *file, const char __user *user_buffer,
 		size_t size, loff_t *offset)
 {
-	/* TODO3: check size doesn't exceed our mapped area size */
+	/* TODO 2/2: check size doesn't exceed our mapped area size */
 	if (size > NPAGES * PAGE_SIZE)
 		size = NPAGES * PAGE_SIZE;
 
-	/* TODO3: copy from user buffer to mapped area */
+	/* TODO 2/3: copy from user buffer to mapped area */
 	memset(kmalloc_area, 0, NPAGES * PAGE_SIZE);
 	if (copy_from_user(kmalloc_area, user_buffer, size))
 		return -EFAULT;
@@ -88,12 +88,12 @@ static int my_mmap(struct file *filp, struct vm_area_struct *vma)
 	if (length > NPAGES * PAGE_SIZE)
 		return -EIO;
 
-	/* TODO: map the whole physically contiguous area in one piece */
+	/* TODO 1/7: map the whole physically contiguous area in one piece */
 	ret = remap_pfn_range(vma, vma->vm_start,
 			virt_to_phys((void *)kmalloc_area) >> PAGE_SHIFT,
 			length, vma->vm_page_prot);
 	if (ret < 0) {
-		printk(KERN_ERR "could not map address area\n");
+		pr_err("could not map address area\n");
 		return ret;
 	}
 
@@ -115,22 +115,21 @@ static int my_seq_show(struct seq_file *seq, void *v)
 	struct vm_area_struct *vma_iterator;
 	unsigned long total = 0;
 
-	/* TODO: Get current process' mm_struct */
+	/* TODO 3: Get current process' mm_struct */
 	mm = get_task_mm(current);
 
-	/* TODO: Iterate through all memory mappings */
+	/* TODO 3/8: Iterate through all memory mappings */
 	vma_iterator = mm->mmap;
 	while (vma_iterator != NULL) {
-		printk(KERN_ERR "%lx %lx\n",
-				vma_iterator->vm_start,
-				vma_iterator->vm_end);
+		pr_info("%lx %lx\n", vma_iterator->vm_start, vma_iterator->vm_end);
 		total += vma_iterator->vm_end - vma_iterator->vm_start;
 		vma_iterator = vma_iterator->vm_next;
 	}
 
-	/* TODO: Release mm_struct */
+	/* TODO 3: Release mm_struct */
 	mmput(mm);
 
+	/* TODO 3: write the total count to file  */
 	seq_printf(seq, "%lu %s\n", total, current->comm);
 	return 0;
 }
@@ -152,6 +151,7 @@ static int __init my_init(void)
 {
 	int ret = 0;
 	int i;
+	/* TODO 3/7: create a new entry in procfs */
 	struct proc_dir_entry *entry;
 
 	entry = proc_create(PROC_ENTRY_NAME, 0, NULL, &my_proc_file_ops);
@@ -162,26 +162,26 @@ static int __init my_init(void)
 
 	ret = register_chrdev_region(MKDEV(MY_MAJOR, 0), 1, "mymap");
 	if (ret < 0) {
-		printk(KERN_ERR "could not register region\n");
+		pr_err("could not register region\n");
 		goto out_no_chrdev;
 	}
 
-	/* TODO: allocate NPAGES+2 pages using kmalloc */
+	/* TODO 1/6: allocate NPAGES+2 pages using kmalloc */
 	kmalloc_ptr = kmalloc((NPAGES + 2) * PAGE_SIZE, GFP_KERNEL);
 	if (kmalloc_ptr == NULL) {
 		ret = -ENOMEM;
-		printk(KERN_ERR "could not allocate memory\n");
+		pr_err("could not allocate memory\n");
 		goto out_unreg;
 	}
 
-	/* TODO: round kmalloc_ptr to nearest page start address */
+	/* TODO 1: round kmalloc_ptr to nearest page start address */
 	kmalloc_area = (char *) PAGE_ALIGN(((unsigned long)kmalloc_ptr));
 
-	/* TODO: mark pages as reserved */
+	/* TODO 1/2: mark pages as reserved */
 	for (i = 0; i < NPAGES * PAGE_SIZE; i += PAGE_SIZE)
 		SetPageReserved(virt_to_page(((unsigned long)kmalloc_area)+i));
 
-	/* TODO: write data in each page */
+	/* TODO 1/6: write data in each page */
 	for (i = 0; i < NPAGES * PAGE_SIZE; i += PAGE_SIZE) {
 		kmalloc_area[i] = 0xaa;
 		kmalloc_area[i + 1] = 0xbb;
@@ -193,7 +193,7 @@ static int __init my_init(void)
 	cdev_init(&mmap_cdev, &mmap_fops);
 	ret = cdev_add(&mmap_cdev, MKDEV(MY_MAJOR, 0), 1);
 	if (ret < 0) {
-		printk(KERN_ERR "could not add device\n");
+		pr_err("could not add device\n");
 		goto out_kfree;
 	}
 
@@ -215,13 +215,13 @@ static void __exit my_exit(void)
 
 	cdev_del(&mmap_cdev);
 
-	/* TODO: clear reservation on pages and free mem. */
+	/* TODO 1/3: clear reservation on pages and free mem. */
 	for (i = 0; i < NPAGES * PAGE_SIZE; i += PAGE_SIZE)
-		ClearPageReserved(
-				virt_to_page(((unsigned long)kmalloc_area)+i));
+		ClearPageReserved(virt_to_page(((unsigned long)kmalloc_area)+i));
 	kfree(kmalloc_ptr);
 
 	unregister_chrdev_region(MKDEV(MY_MAJOR, 0), 1);
+	/* TODO 3: remove proc entry */
 	remove_proc_entry(PROC_ENTRY_NAME, NULL);
 }
 

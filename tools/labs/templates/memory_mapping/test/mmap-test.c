@@ -101,15 +101,16 @@ out:
 	return ret;
 }
 
-int main(void)
+int main(int argc, const char **argv)
 {
-	int fd;
+	int fd, test;
 	unsigned char *addr;
 	int len = NPAGES * getpagesize();
 	int i;
-#ifdef TASK_4
 	unsigned long usage_before_mmap, usage_after_mmap;
-#endif
+
+	if (argc > 1)
+		test = atoi(argv[1]); 
 
 	assert(system("mknod " MMAP_DEV " c 42 0") == 0);
 
@@ -136,34 +137,33 @@ int main(void)
 			printf("matched\n");
 	}
 
-#ifdef TASK_3
-	if (test_read_write(fd, addr)) {
+
+	if (test >= 2 && test_read_write(fd, addr)) {
 		perror("read/write test");
 		assert(system("rm " MMAP_DEV) == 0);
 		exit(EXIT_FAILURE);
 	}
-#endif
 
-#ifdef TASK_4
-	usage_before_mmap = show_mem_usage();
-	if (usage_before_mmap < 0)
-		printf("failed to show memory usage\n");
+	if (test >= 3) {
+		usage_before_mmap = show_mem_usage();
+		if (usage_before_mmap < 0)
+			printf("failed to show memory usage\n");
 
-#define SIZE (10 * 1024 * 1024)
-	addr = mmap(NULL, SIZE, PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
-	if (addr == MAP_FAILED)
-		perror("mmap_");
+		#define SIZE (10 * 1024 * 1024)
+		addr = mmap(NULL, SIZE, PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+		if (addr == MAP_FAILED)
+			perror("mmap_");
 
-	usage_after_mmap = show_mem_usage();
-	if (usage_after_mmap < 0)
-		printf("failed to show memory usage\n");
-	printf("mmaped :%lu MB\n",
-			(usage_after_mmap - usage_before_mmap) >> 20);
+		usage_after_mmap = show_mem_usage();
+		if (usage_after_mmap < 0)
+			printf("failed to show memory usage\n");
+		printf("mmaped :%lu MB\n",
+		       (usage_after_mmap - usage_before_mmap) >> 20);
 
-	sleep(30);
+		sleep(30);
 
-	munmap(addr, SIZE);
-#endif
+		munmap(addr, SIZE);
+	}
 
 	close(fd);
 
