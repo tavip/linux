@@ -15,6 +15,7 @@ driver topics. For each topic there are two parts:
 
 .. toctree::
 
+   kernel-uboot.rst
    vm.rst
    exercises.rst
    kernel_modules.rst
