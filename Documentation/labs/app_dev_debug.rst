@@ -1,11 +1,276 @@
+=====================================
 Application development and debugging
 =====================================
 
+Application development
+=======================
+
+GCC
+---
+
+GCC is the default compiler suite on most Linux distributions.
+We'll use a simple program that prints a string of characters to the standard
+output to demonstrate gcc usage.
+
+.. code-block:: c
+
+    /* hello.c */
+    #include <stdio.h>
+     
+    int main(void) 
+    {
+          printf("SO, ... hello world!\n");
+     
+          return 0;
+    }
+
+GCC uses the ``gcc`` command to compile C programs. A typical invocation is for
+compiling a program from a single source file, in our case hello.c .
+
+.. code-block:: bash
+
+   so@spook$ ls
+   hello.c
+   so@spook$ gcc hello.c
+   so@spook$ ls
+   a.out  hello.c
+   so@spook$ ./a.out
+   SO, ... hello world!
+
+.. code-block:: bash
+
+   so@spook$ ls
+   hello.c
+   so@spook$ gcc hello.c -o hello
+   so@spook$ ls
+   hello  hello.c
+   so@spook$ ./hello
+   SO, ... hello world!
+
+
+Therefore, the gcc hello.c command was used to compile the hello.c source file.
+The result was the executable file a.out (default name used by gcc ). If you
+want to get an executable with a different name, you can use the -o option.
+Phases of compilation
+
+Compilation refers to obtaining an executable file from a source file. As we
+saw in the previous paragraph, the gcc command resulted in the ``hello`` executable
+from the hello.c source file. Internally, gcc goes through several
+processing phases of the source file until the executable is obtained. These
+phases are highlighted in the diagram below: compilation phases
+options
+
+By default, gcc creates an executable from a source file. Using
+various options, we can stop compiling at one of the intermediate phases as 
+follows:
+
+
+   * ``-E`` - only preprocess the source file
+        gcc -E hello.c - will generate the preprocessed file that will default 
+        to the standard output. 
+   * ``-S`` - the compilation phase is performed
+        gcc -S hello.c - will generate the file in assembly language hello.s 
+   * ``-c`` - the assembly phase is carried out as well
+        gcc -c hello.c - will generate the hello.o object file 
+
+The above options can be combined with -o to specify the output file.
+preprocessing
+
+Compiling from multiple files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The examples so far deal with written programs in a single source file. In
+reality, applications are complex and writing the entire code in one file makes it
+hard to maintain and difficult to expand. In this regard, the application is
+written in several source files called modules. A module typically contains functions
+that play a common role.
+
+The following files are used to support how to compile a program from multiple source files:
+
+.. code-block:: c
+
+    /* main.c */
+
+    #include <stdio.h>
+    #include "util.h"
+     
+    int main(void)
+    {
+         f1();
+         f2();
+         return 0;
+    }
+
+.. code-block:: c
+
+      /* util.h */
+    #ifndef UTIL_H
+    #define UTIL_H   1
+     
+    void f1 (void);
+    void f2 (void);
+     
+    #endif
+
+.. code-block:: c
+
+     /* f1. c */
+    #include <stdio.h>
+    #include "util.h"
+     
+    void f1(void)
+    {
+       printf("Current file name is %s\n", __FILE__);
+     
+    }
+
+.. code-block:: c
+
+      /* f2.c */
+    #include <stdio.h>
+    #include "util.h"
+     
+    void f1(void)
+    {
+       printf("Current file name is %s\n", __FILE__);
+    }
+
+In the above program, main function calls f1 and f2 to display various information.
+To compile them all C files are sent as arguments to gcc :
+
+.. code-block:: c
+
+   so@spook$ ls
+   f1.c  f2.c  main.c  util.h
+   so@spook$ gcc -Wall main.c f1.c f2.c -o main
+   so@spook$ ls
+   f1.c  f2.c  main  main.c  util.h
+   so@spook$ ./main 
+   Current file name f1.c
+   Current line 8 in file f2.c
+
+The executable was called main ; For this, we used the -o option.
+
+Note the use of the util.h header to declare f1 and f2. Declaring a function is
+done by specifying the header. The header file is included in the main.c
+file so that it knows the call format of the f1 and f2 functions. The functions
+f1 and f2 are defined, respectively, in f1.c and f2.c Their code is integrated 
+into the executable at the time of the link-editing.
+
+Generally, to get a multiple-source executable, it's customary to compile each source
+to the object mode and then link-editing them:
+
+.. code-block:: c
+
+   so@spook$ ls
+   f1.c  f2.c  main.c  util.h
+   so@spook$ gcc -Wall -c  f1.c
+   so@spook$ gcc -Wall -c  f2.c
+   so@spook$ gcc -Wall -c  main.c
+   so@spook$ ls
+   f1.c  f1.o  f2.c  f2.o  main.c  main.o  util.h
+   so@spook$ gcc -o main main.o f1.o f2.o
+   so@spook$ ls
+   f1.c  f1.o  f2.c  f2.o  main  main.c  main.o  util.h
+   so@spook$ ./main 
+   Current file name f1.c
+   Current line 8 in file f2.c
+
+Note that the executable main is obtained by linking the object modules. This
+approach has the advantage of efficiency. If the source file f2.c changes, then
+it will only need to be compiled and re-edited. If a direct executable had been
+obtained from sources then all three files would be compiled and then re-edited
+the link-editing. The time consumed would be much higher, especially during the
+development phase when the compilation phases are frequent, and only modified
+source files are being compiled.
+
+Decreasing development time by compiling only the sources that have been
+modified is the basic motivation for the existence of automation tools such as
+make.
+
+
+GNU Make
+--------
+
+Make is a utility that allows automation and efficiency of tasks. It is 
+especially used to automate program compilation. As has been said, it is 
+inefficient to compile each file of each file and then link-editing to get an 
+executable from multiple sources. Each file is compiled separately, and only 
+one modified file will be recompiled.
+Simple example of Makefile
+
+The make utility uses a configuration file called ``Makefile``. Such a file
+contains rules and automation commands.
+
+.. code-block:: bash
+
+    #Makefile
+
+    all:
+           gcc -Wall hello.c -o hello
+    clean:
+           rm -f hello
+
+.. code-block:: bash
+
+   so@spook$ make
+   gcc -Wall hello.c -o hello
+   so@spook$ ./hello
+   SO, ... hello world!
+
+.. code-block:: bash
+
+   so@spook$ make clean
+   rm -f hello
+   so@spook$ make all
+   gcc -Wall hello.c -o hello
+
+The example above contains two rules: all and clean. When executing the make
+command, the first rule in Makefile is executed (in this case all, no matter
+the name). The executed command is ``gcc -Wall hello.c -o hello``. You can
+explicitly specify which rule to execute by submitting as a make command.
+(make clean to delete the hello executable and make all to get that executable 
+again).
+
+By default, GNU Make searches the GNUmakefile, Makefile, makefile files and 
+analyzes them in order. To specify which Makefile file to analyze, use the -f 
+option. Thus, in the example below, we use the Makefile.ex1 file:
+
+The following is a syntax of a rule from a Makefile file:
+
+    * ``target`` - is usually the file that will be obtained by running the command 
+      command. As noted in the previous example, it may be a virtual target that does 
+      not have a file associated with it.
+    * prerequisites - represent the dependencies required to follow the rule; 
+     Usually are files required to achieve the target.
+    * ``<Tab>`` - represents the tab character and must be used before the order is 
+     specified.
+    * ``command`` - a list of commands (none, one, any) run when the target is 
+      reached. 
+
+An example for a Makefile file is:
+
+.. code:: block
+
+    # Makefile.ex2
+
+    all: hello
+     
+    hello: hello.o
+            gcc hello.o -o hello
+     
+    hello.o: hello.c
+            gcc -Wall -c hello.c
+     
+    clean:
+            rm -f *.o *~ hello
+
 Debugging
----------
+=========
 
 strace
-******
+------
+
 ``strace`` intercepts and records system calls made by a process and the signals it
 receives. In the simplest form strace runs the specified command until the
 associated process ends.
@@ -37,7 +302,7 @@ The most common options for strace are:
 Another utility related to strace is ``ltrace``. It tracks library calls
 
 gdb
-***
+---
 
 The purpose of a debugger (for example, GDB) is to allow us to inspect what 
 happens inside a program while it is running or when a fatal error occurred.
@@ -111,7 +376,7 @@ troubleshoot a program using the core file:
    (gdb)
 
 Basic GDB commands
-******************
+~~~~~~~~~~~~~~~~~~
 
 Some of the basic commands in gdb are:
 
@@ -261,8 +526,8 @@ The use of these commands is exemplified below:
    (gdb)
 
 
-Working with memory - Problems
-------------------------------
+Working with memory
+===================
 
 Working with heap is one of the main causes of programming problems. Working
 with pointers, the need to use system/library calls for assignment/assignment
@@ -355,7 +620,7 @@ in memory handling. It detects, however, a significant number of errors and is
 an important feature of glibc.
 
 Memory leaks
-************
+------------
 
 A memory leak occurs in two situations:
    
@@ -371,7 +636,7 @@ As with the problem of invalid access to memory, the Valgrind utility is very
 useful in detecting program memory leaks.
 
 Valgrind
-********
+--------
 
 Valgrind is a suite of utilities used for debugging and profiling. The most 
 popular is ``memcheck``, a utility that detects memory errors (invalid access,
@@ -558,7 +823,7 @@ Full information on how to use Valgrind and associated utilities found in the
 pages of documentation Valgrind.
 
 profiling
----------
+=========
 
 A profiler is a performance analysis utility that helps the programmer 
 determine the bottleneck of a program. This is done by investigating program 
@@ -566,7 +831,7 @@ behavior, evaluating memory consumption and the relationship between its
 modules.
 
 perfcounters
-************
+------------
 
 Most modern processors offer performance counters that track different types of
 hardware events: executed instructions, cache-misses, missed missed
@@ -584,7 +849,7 @@ The perfcounters subsystem
       * tracepoints (eg: sys_enter_open, sys_exit_open).
 
 perf
-****
+----
 
 The ``perf`` utility is the user interface perfcounters subsystem. It provides a
 git like command line and does not require the existence of a daemon.
@@ -610,7 +875,7 @@ The most used commands are:
    * ``top`` - Generates and displays real-time information about uploading a system 
 
 perf list
-*********
+~~~~~~~~~
 
 Displays the symbolic names of all types of events that can be tracked by perf .
 
@@ -637,7 +902,7 @@ Displays the symbolic names of all types of events that can be tracked by perf .
    
 
 perf state
-**********
+~~~~~~~~~~
 
 Run an order and display the statistics posted by the performance counters 
 subsystem.
@@ -679,7 +944,7 @@ times specifying the -r option.
 Note the most important events listed above.
 
 perf top
-********
+~~~~~~~~
 
 Generates and displays real-time information about uploading a system.
 
@@ -708,7 +973,7 @@ We note that file-handling functions (iterate, find) are the ones that most
 often appear in the perf-top output of the recursive home directory command.
 
 perf record
-***********
+~~~~~~~~~~~
 
 Run a command and save the profiling information in the perf.data file.
 
@@ -723,7 +988,7 @@ Run a command and save the profiling information in the perf.data file.
   laborator-07  perf.data
   
 perf report
-***********
+~~~~~~~~~~~
 
 Interprets saved data in perf.data after analysis using perf record . Thus for 
 the example wget above we have:
