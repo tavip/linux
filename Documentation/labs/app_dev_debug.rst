@@ -1312,6 +1312,18 @@ the example wget above we have:
 Exercises
 =========
 
+.. important:: The skeleton code is generated from full source examples
+   located in ``tools/labs/templates``. To solve tasks you start by
+   generating the skeleton code, running the skels target in ``tools/labs``.
+
+   .. code-block:: bash
+
+     tools/labs $ make clean
+     tools/labs$ LABS=app_dev_debug make skels
+
+   All paths below are relative to skeleton base directory ``tools/labs/skels/app_dev_debug``.
+
+
 Exercise 1 - Compilation
 ------------------------
 
@@ -1342,7 +1354,7 @@ Use the ``make print`` command to compile the print program.
 Exercise 3 - Segmentation fault
 ------------------------------------------------------
 
-Got to 3-gdb/ directory and examine the source. The program should read a message
+Go to 3-gdb/ directory and examine the source. The program should read a message
 from stdin and display it.
 
   * Compile and run the source.
@@ -1398,7 +1410,7 @@ allocate_flowers.
 
 Exercise 6 - Row / Column major order
 -------------------------------------
-Using the perf we want to determine whether the C language is
+Using the perf tool we want to determine whether the C language is
 column-major or row-major.
 
 Go to ``6-major/`` directory and fill the ``row.c`` so that it increments the
