@@ -1,8 +1,10 @@
+==================
 Linux Device Model
 ==================
 
 Overview
---------
+========
+
 Plug and Play is a technology that offers support for automatically adding and 
 removing devices to your system. This reduces conflicts with the resources they 
 use by automatically configuring them at system startup. In order to achieve 
@@ -51,7 +53,7 @@ To maintain this information, the kernel uses the following entities:
     view of devices according to how they are attached to buses), classes, etc. 
 
 sysfs
------
+=====
 
 The kernel provides a representation of its model in userspace through the 
 sysfs virtual file system. It is usually mounted in the /sys directory and 
@@ -90,7 +92,7 @@ are as follows:
 Other attributes are available, depending on the bus and driver used.
 
 Basic Structures in Linux Devices
----------------------------------
+=================================
 
 Linux Device Model provides a number of structures to ensure the interaction 
 between a hardware device and a device driver. The whole model is based on 
@@ -510,6 +512,7 @@ When a new device is discovered, a class and a node will be assigned to the
 
 Hotplug
 -------
+
 Hotplug describes the mechanism for adding or removing a device from the system 
 while it is running without having to reboot the system.
 
