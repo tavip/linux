@@ -2,9 +2,36 @@
 Application development and debugging
 =====================================
 
+.. slideconf::
+   :theme: single-level
+   :autoslides: false
+
 Application development
 =======================
 
+.. slide:: Application development
+   :level: 1
+
+
+ 
+.. slide:: Hello World
+   :level: 2
+   
+   ``GCC`` is the default compiler suite on most Linux distributions.
+
+   .. code-block:: c
+
+       /* hello.c */
+
+       #include <stdio.h>
+        
+       int main(void) 
+       {
+             printf("SO, ... hello world!\n");
+        
+             return 0;
+       }
+   
 GCC
 ---
 
@@ -24,6 +51,31 @@ output to demonstrate ``gcc`` usage.
           return 0;
     }
 
+.. slide:: Compilation
+   :level: 2
+
+   Use ``gcc`` command to compile a program.
+
+   .. code-block:: bash
+   
+      so@spook$ ls
+      hello.c
+      so@spook$ gcc hello.c
+      so@spook$ ls
+      a.out  hello.c
+      so@spook$ ./a.out
+      SO, ... hello world!
+   
+   .. code-block:: bash
+   
+      so@spook$ ls
+      hello.c
+      so@spook$ gcc hello.c -o hello
+      so@spook$ ls
+      hello  hello.c
+      so@spook$ ./hello
+      SO, ... hello world!
+   
 ``GCC`` uses the ``gcc`` command to compile C programs. A typical invocation is for
 compiling a program from a single source file, in our case ``hello.c``.
 
@@ -60,6 +112,16 @@ saw in the previous paragraph, the gcc command resulted in the ``hello`` executa
 from the hello.c source file. Internally, gcc goes through several
 processing phases of the source file until the executable is obtained. These
 phases are highlighted in the diagram below.
+
+.. slide:: Phases of compilation
+   :level: 2
+
+   * ``-E``, preprocessing
+   * ``-S``, compilation
+   * ``-c``, assembly
+
+   .. image:: re.png
+      :align: center
 
 .. image:: re.png
    :align: center
@@ -140,6 +202,30 @@ The following files are used to demonstrate how to compile a program from multip
 In the above program, main function calls f1 and f2 to display various information.
 To compile them all C files are sent as arguments to gcc:
 
+.. slide:: Compilation from multiple files
+   :level: 2
+
+   .. code-block:: bash
+   
+      so@spook$ ls
+      f1.c  f2.c  main.c  util.h
+      so@spook$ gcc -Wall main.c f1.c f2.c -o main
+      so@spook$ ls
+      f1.c  f2.c  main  main.c  util.h
+
+   .. code-block:: bash
+   
+      so@spook$ ls
+      f1.c  f2.c  main.c  util.h
+      so@spook$ gcc -Wall -c  f1.c
+      so@spook$ gcc -Wall -c  f2.c
+      so@spook$ gcc -Wall -c  main.c
+      so@spook$ ls
+      f1.c  f1.o  f2.c  f2.o  main.c  main.o  util.h
+      so@spook$ gcc -o main main.o f1.o f2.o
+      so@spook$ ls
+      f1.c  f1.o  f2.c  f2.o  main  main.c  main.o  util.h
+   
 .. code-block:: bash
 
    so@spook$ ls
@@ -151,6 +237,7 @@ To compile them all C files are sent as arguments to gcc:
    Current file name f1.c
    Current line 8 in file f2.c
 
+
 The executable was called main ; For this, we used the -o option.
 
 Note the use of the util.h header to declare f1 and f2. Declaring a function is
@@ -160,7 +247,7 @@ f1 and f2 are defined, respectively, in f1.c and f2.c Their code is integrated
 into the executable at the time of the link-editing.
 
 Generally, to get a multiple-source executable, it's customary to compile each source
-to the object mode and then link-editing them:
+to the object file and then link-editing them:
 
 .. code-block:: bash
 
@@ -239,8 +326,26 @@ By default, GNU Make searches the GNUmakefile, Makefile, makefile files and
 analyzes them in order. To specify which Makefile file to analyze, use the -f 
 option.
 
+.. slide:: Makefile
+   :level: 2
+
+   .. image:: make.png
+      :align: center
+
+   .. code-block:: bash
+   
+       all: hello
+
+       hello: hello.o
+               gcc hello.o -o hello
+       hello.o: hello.c
+               gcc -Wall -c hello.c
+       clean:
+               rm -f *.o *~ hello
+
 .. image:: make.png
    :align: center
+
 
 The following is a syntax of a rule from a Makefile file:
 
@@ -274,6 +379,31 @@ An example for a Makefile file is:
 Debugging
 =========
 
+.. slide:: Debugging
+   :level: 1
+
+.. slide:: strace
+   :level: 2
+
+   ``strace`` intercepts system calls made by a process.
+
+   .. code-block:: bash
+   
+      $ strace cat /proc/cpuinfo
+      execve("/bin/cat", ["cat", "/proc/cpuinfo"], [/* 30 vars */]) = 0
+      open("/proc/cpuinfo", O_RDONLY)         = 3
+      read(3, "processor\t: 0\nvendor_id\t: Genuin"..., 32768) = 3652
+      write(1, "processor\t: 0$\nvendor_id\t: Genui"..., 7512) = 7512
+
+   
+   Most common options for strace:
+
+   .. code-block:: bash
+
+      strace -f -e open,read,write,close -o f.log -p $(pidof myprogram)
+
+   Also don't forget about ``ltrace``.
+
 strace
 ------
 
@@ -283,7 +413,7 @@ associated process ends.
 
 .. code-block:: bash
 
-   $strace cat /proc/cpuinfo
+   $ strace cat /proc/cpuinfo
    execve("/bin/cat", ["cat", "/proc/cpuinfo"], [/* 30 vars */]) = 0
    open("/proc/cpuinfo", O_RDONLY)         = 3
    read(3, "processor\t: 0\nvendor_id\t: Genuin"..., 32768) = 3652
@@ -306,6 +436,52 @@ The most common options for strace are:
    connect(50, {sa_family=AF_INET, sin_port=htons(80), sin_addr=inet_addr("141.85.227.65")}, 16)= -1 EINPROGRESS
 
 Another utility related to strace is ``ltrace``. It tracks library calls
+
+.. slide:: gdb (Gnu DeBugger)
+   :level: 2
+
+   * inspects the behavior of a program
+
+     - running
+     - core file
+
+   * need to use ``-g`` compile option
+
+   .. code-block:: bash
+
+      $ gdb ./hello
+      $ gdb -p $(pidof hello)
+      $ gdb hello.core
+
+.. slide:: gdb (Gnu DeBugger)
+   :level: 2
+
+   .. code-block:: c
+   
+       #include "f.h"
+
+       int main()
+       {
+          char *bug = 0;
+          *bug = f(1, 2);
+          return 0;
+       }
+   
+   gdb session to debug the problem.
+
+   .. code-block:: bash
+   
+      $ gcc -Wall -g add.c
+      $ gdb a.out
+      [...]
+      (gdb) run
+      Starting program: a.out
+   
+      Program received signal SIGSEGV, Segmentation fault.
+      0x08048411 in main () at add.c:13
+      13              *bug=f(1, 2);
+      (gdb)
+   
 
 gdb
 ---
@@ -380,6 +556,21 @@ troubleshoot a program using the core file:
    0x08048411 in main () at add.c:13
    13              *bug=f(1, 2);
    (gdb)
+
+.. slide:: gdb (Gnu DeBugger)
+   :level: 2
+
+   .. code-block:: bash
+
+      $ break [file:function]
+      $ run [arglist]
+      $ next
+      $ step
+      $ continue
+      $ list
+      $ print expr
+      $ backtrace
+      $ quit
 
 Basic GDB commands
 ~~~~~~~~~~~~~~~~~~
@@ -530,6 +721,8 @@ The use of these commands is exemplified below:
     sa_restorer = 0xbffff9f2}
    (gdb)
 
+.. slide:: Working with memory
+   :level: 1
 
 Working with memory
 ===================
@@ -548,6 +741,29 @@ The most common problems with memory are:
 
 Both issues and utilities that can be used to combat memory problems will be presented 
 below.
+
+.. slide:: mcheck
+   :level: 2
+
+   * checks heap's consistency
+   * ``export MALLOC_CHECK=_1``
+
+   .. code-block:: c
+   
+       int main(void)
+       {
+           int *v1;
+        
+           v1 = malloc(5 * sizeof(*v1));
+           /* overflow */
+           v1[6] = 100;
+           free(v1);
+        
+           /* write after free */
+           v1[6] = 100;
+           return 0;
+       }
+   
 
 mcheck - check the heap consistency
 -----------------------------------
@@ -610,6 +826,22 @@ However, if we define the ``MALLOC_CHECK_`` environment variable , the two
 errors are detected. Note that an error is detected only at the time of a new 
 memory call intercepted by ``mcheck``.
 
+.. slide:: mcheck
+   :level: 2
+
+   * normal run of the program might not expose the problem
+
+   .. code-block:: bash
+   
+      so@spook$ make
+      cc -Wall -g    mcheck_test.c   -o mcheck_test
+      so@spook$ ./mcheck_test  
+      so@spook$ MALLOC_CHECK_=1 ./mcheck_test
+      malloc: using debugging hooks
+       *** glibc detected *** ./mcheck_test: free(): invalid pointer: 0x0000000000601010 ***
+       *** glibc detected *** ./mcheck_test: malloc: top chunk is corrupt: 0x0000000000601020 ***
+   
+
 .. code-block:: bash
 
    so@spook$ make
@@ -624,6 +856,31 @@ Mcheck is not a complete solution and does not detect any errors that may occur
 in memory handling. It detects, however, a significant number of errors and is
 an important feature of glibc.
 
+.. slide:: Memory leaks
+   :level: 2
+
+   * a program fails to free a memory area
+   * a program loses the reference to an allocated area
+
+   .. code-block:: c
+
+    int main(void) {
+      int a, *b;
+
+      b = malloc(5 * sizeof(int));
+      b = &a;
+
+      return 0;
+    }
+
+   .. code-block:: bash
+   
+       so@spook$ valgrind --tool=memcheck ./valgrind_test
+       ==18663== LEAK SUMMARY:
+       ==18663==    definitely lost: 5 bytes in 1 blocks.
+       ==18663==    still reachable: 0 bytes in 0 blocks.
+       ==18663== Rerun with --leak-check=full to see details of leaked memory.
+   
 Memory leaks
 ------------
 
@@ -827,6 +1084,44 @@ programming errors that result from poor memory management.
 Full information on how to use Valgrind and associated utilities found in the 
 pages of documentation Valgrind.
 
+.. slide:: Profiling
+   :level: 1
+
+.. slide:: perf counters
+   :level: 2
+
+   * processor registers to track hardware events
+
+     - executed instructions
+     - cache access
+  
+   * software events
+
+     - page faults
+   
+   * tracepoints
+     
+     - sys_enter_open
+
+   * trigger an interrupt after a number of events
+
+.. slide:: perf
+   :level: 2
+
+   * user interface with perfcounters
+
+   .. code-block:: bash
+   
+     perf [--version] [--help] COMMAND [ARGS]
+   
+     $ perf annotate # reads perf.data and display code with perf.data
+     $ per list      # lists the symbolic names of events available
+     $ perf lock     # analyzes lock events
+     $ perf record   # runs an command and saves the profiling information in the perf.data 
+     $ perf report   # reads perf.data (created by perf record) and display the profile
+     $ perf stat     # runs a command and display the statistics posted by perfcounter
+     $ perf top      # generates and displays real-time information about a system load
+
 profiling
 =========
 
@@ -871,13 +1166,13 @@ The most used commands are:
    * ``list`` - Lists the symbolic names of all types of events that can be watched
      by perf
    * ``lock`` - Analyzes lock events
-   * ``record`` - Runs an order and saves the profiling information in the perf.data 
+   * ``record`` - Runs an command and saves the profiling information in the perf.data 
      file
    * ``report`` - Reads perf.data (created by perf record ) and display the profile
    * ``sched`` - Schedule Measurement Tool (latencies)
-   * ``stat`` - Run an order and display the statistics posted by the performance 
+   * ``stat`` - Runs a command and display the statistics posted by the performance 
      counters subsystem
-   * ``top`` - Generates and displays real-time information about uploading a system 
+   * ``top`` - Generates and displays real-time information about load of a system 
 
 perf list
 ~~~~~~~~~
