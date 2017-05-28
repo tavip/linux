@@ -6,8 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "utils.h"
-
 #define NO_FLOWERS 5
 
 #define NAME_LEN 16
@@ -27,14 +25,18 @@ static struct flower_info *allocate_flowers(int no)
 	int i;
 	struct flower_info *f_info;
 
-	/*TODO: allocate space for no elements of type flower_info */
-	f_info = malloc(no * sizeof(struct flower_info));
-	DIE(f_info == NULL, "malloc");
+	f_info = malloc(sizeof(*f_info));
+	if (!f_info)
+		return NULL;
 
 	/* initialization */
 	for (i = 0; i < no; i++) {
+		/* TODO 0/5: Allocate memory for name */
 		f_info[i].name = malloc(NAME_LEN * sizeof(char));
-		DIE(f_info[i].name == NULL, "malloc");
+		if (!f_info[i].name) {
+			free(f_info);
+			return NULL;
+		}
 
 		sprintf(f_info[i].name, "flower__%d__", i);
 		f_info[i].price = 1 + i * 2;
@@ -52,7 +54,9 @@ static void free_flowers(struct flower_info *f_info, int no)
 {
 	int i;
 
+
 	for (i = 0; i < no; i++) {
+		/* TODO 0/1: Free name */
 		free(f_info[i].name);
 		f_info[i].name = NULL;
 	}

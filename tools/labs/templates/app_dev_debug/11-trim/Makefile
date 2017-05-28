@@ -8,7 +8,7 @@ all: trim
 
 trim: trim.o
 
-trim.o: trim.c ../utils/utils.h
+trim.o: trim.c
 
 clean:
 	-rm -f *.o *~ trim

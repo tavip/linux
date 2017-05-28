@@ -10,11 +10,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "utils.h"
-
 static char *myfun(void)
 {
-	static char lab_so[6]; /* static / dinamic / global */
+	/* TODO 0/1: Where is lab_so allocated? */
+	static
+	char lab_so[6]; 
 
 	sprintf(lab_so, "%s-%s", "Lab", "4");
 	printf("myfun: %s\n", lab_so);

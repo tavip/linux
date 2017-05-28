@@ -15,23 +15,30 @@ char last_name[]  = "    Potter";
 
 static char *trim(char *s)
 {
+	/* TODO 0/4: Follow pointer p */
 	/* We correct trim by using an auxiliary variable aux to save p.
 	 * free is issued on aux to free the exact allocated memory.
 	 */
-	char *aux, *p = malloc(strlen(s) + 1);
+	char *aux
+	char *p = malloc(strlen(s) + 1);
 
 	if (p == NULL) {
 		fprintf(stderr, "malloc failed\n");
 		exit(EXIT_FAILURE);
 	}
 
+	/* TODO 0/1: What happens with p? */
 	aux = p;
 	strcpy(p, s);
 	while (*p == ' ')
 		p++;
 
 	strcpy(s, p);
+
+	/* TODO 0/1: Should we free p? */
 	free(aux);
+
+	free(p);
 
 	return s;
 }

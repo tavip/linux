@@ -17,7 +17,9 @@ main(void)
 
 	for (i = 0; i < SIZE; ++i) {
 		for (j = 0; j < SIZE; ++j) {
-			/* TODO */
+			/* TODO 0/1: Fill matrix by lines */
+			x[i][j] = i + j;
+
 		}
 	}
 	return 0;

@@ -8,7 +8,7 @@ all: endian
 
 endian: endian.o
 
-endian.o: endian.c ../utils/utils.h
+endian.o: endian.c
 
 clean:
 	-rm -f *.o *~ endian

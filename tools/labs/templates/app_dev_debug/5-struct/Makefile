@@ -1,5 +1,5 @@
 CC = gcc
-CPPFLAGS = -I../utils
+CPPFLAGS =
 CFLAGS = -Wall -Wextra -g
 
 .PHONY: all clean
@@ -8,7 +8,7 @@ all: struct
 
 struct: struct.o
 
-struct.o: struct.c ../utils/utils.h
+struct.o: struct.c
 
 clean:
 	-rm -f *.o *~ struct
