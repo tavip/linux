@@ -1,0 +1,20 @@
+/bin/busybox mkdir -p /sbin /bin /lib /usr/bin /usr/sbin \
+	     /usr/lib /proc /sys /debug /dev
+
+/bin/busybox mount -t proc proc /proc
+
+# install busybox builtin applets
+/bin/busybox --install
+
+mount -t sysfs sysfs /sys
+mount -t debugfs debugfs /debug
+
+# pseudo terminal for telnet
+mkdir /dev/pts && mount -t devpts devpts /dev/pts
+
+# Initialize 127.0.0.1 loopback
+ifconfig lo 127.0.0.1
+
+
+
+

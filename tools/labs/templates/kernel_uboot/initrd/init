@@ -1,0 +1,10 @@
+#!/bin/sh
+/bin/busybox mkdir -p tmpfs
+/bin/busybox mount -t tmpfs tmpfs tmpfs
+/bin/busybox cp -r / tmpfs
+/bin/busybox mkdir -p tmpfs/dev
+/bin/busybox mount -t devtmpfs devtmpfs tmpfs/dev
+
+/bin/busybox ln -s /bin/busybox /bin/switch_root
+exec /bin/switch_root -c /dev/console /tmpfs /bin/busybox init
+
