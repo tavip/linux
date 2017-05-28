@@ -1,3 +1,4 @@
+==========
 Kernel API
 ==========
 
@@ -5,14 +6,14 @@ Kernel API
    :theme: single-level
 
 Lab objectives
---------------
+==============
 
   * Familiarize yourself with the basic Linux kernel API
   * Description of memory allocation mechanisms
   * Description of locking mechanisms 
 
 Overview
---------
+========
 
 Inside the current lab we present a set of concepts and basic functions required
 for starting Linux kernel programming. It is important to note that kernel
@@ -25,7 +26,7 @@ the user-space API, whether we refer to POSIX or ANSI C (standard C language
 library functions).
 
 Accessing memory
-----------------
+================
 
 An important difference in kernel programming is how to access and allocate 
 memory. Due to the fact that kernel programming is very close to the physical
@@ -68,7 +69,7 @@ allocation of large-scale stack structures or the use of recursive calls should
 be avoided.
 
 Contexts of execution
----------------------
+=====================
 
 In relation to kernel execution, we distinguish two contexts: process context
 and interrupt context. We are in the process context when we run code as a
@@ -86,7 +87,7 @@ system detects this condition will generate an error condition that will cause
 the operating system to shut down.
 
 Locking
--------
+=======
 
 One of the most important features of kernel programming is parallelism. Linux
 support SMP systems with multiple processors and kernel preemptivity. This makes
@@ -105,7 +106,7 @@ interrupts. Due to the mechanism used, it is important that a spinlock be
 detained as little time as possible.
 
 Preemptivity
-------------
+============
 
 Linux uses a preemptive kernels. The notion of preemptive multitasking should not
 be confused with the notion of preemptive kernel. The notion of preemptive multitasking
@@ -119,10 +120,10 @@ that can run from different process contexts, we need to protect ourselves with
 synchronization primitives, even with the single processor.
 
 Linux Kernel API
-----------------
+================
 
 Convention indicating errors
-****************************
+----------------------------
 
 For Linux kernel programming, the convention used to call functions to indicate 
 success is the same as UNIX programming: 0 for success, or a value other than 0 
