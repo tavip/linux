@@ -1,6 +1,6 @@
-========================================
-Cross-compiling, Kernel and Uboot basics
-========================================
+=====================================================
+Cross-compiling, Kernel, Uboot, Busybox, basic rootfs
+=====================================================
 
 Cross-compiling
 ===============
@@ -11,7 +11,7 @@ debugger, C library and other essential system libraries and
 utilities) is needed. The cross-compiler term is sometimes used
 instead of cross-toolchain.
 
-A cross-tolchain is designed to run an another architecture than the
+A cross-tolchain is designed to run on another architecture than the
 code it is producing. For example, we may have a toolchain that runs
 on x86 and produces code for ARM.
 
@@ -64,8 +64,8 @@ simple verification tasks.
   qemu-systme-i386); this mode can take advantage of virtualization
   features if target and host are the same
 
-* a userspace based emulation that is suitable to checking programs
-  built for an OS environment (e.g. qemu-arm-static, qemu-i386-status)
+* a userspace based emulation that is suitable to check programs built
+  for an OS environment (e.g. qemu-arm-static, qemu-i386-status)
 
 .. attention:: In order to use the userspace based emulation you
 	       either need the full system library or to compile the
@@ -399,12 +399,170 @@ protocol. This is an example of a TFTP boot sequence:
 
 	     => usb start
 
+Busybox
+=======
+
+Busybox is a standalone program that contains most of the basic tools
+needed for a Linux system. It is used in small system, where we don't
+have space to use the full system utilities. It alone can be used to
+create a fully functional (although limited) Linux system.
+
+.. note:: The tools that busybox offers are limited in functionality
+	  as they are rewritten from scratch to save space.
+
+Busybox uses the same configuration and building system as the kernel
+or u-boot. As before the ARCH and CROSS_COMPILE make variables can be
+used to select the architecture and cross-compiler.
+
+The build process will produce a single binary, usually statically
+linked, called *busybox*. In order to replicate the functionality of a
+regular Linux system busybox creates symbolic links to itself, at
+runtime, with the names of the commands it supports.
+
+The commands the busybox supports are configurable from its
+config. Here are the commands that are supported on a typical
+configuration:
+
+.. code-block:: shell
+
+   BusyBox v1.22.1 (Ubuntu 1:1.22.0-15ubuntu1) multi-call binary.
+   BusyBox is copyrighted by many authors between 1998-2012.
+   Licensed under GPLv2. See source distribution for detailed
+   copyright notices.
+
+   Usage: busybox [function [arguments]...]
+   or: busybox --list[-full]
+   or: busybox --install [-s] [DIR]
+   or: function [arguments]...
+
+   BusyBox is a multi-call binary that combines many common Unix
+   utilities into a single executable.  Most people will create a
+   link to busybox for each function they wish to use and BusyBox
+   will act like whatever it was invoked as.
+
+   Currently defined functions:
+   [, [[, acpid, adjtimex, ar, arp, arping, ash, awk, basename, blockdev,
+   brctl, bunzip2, bzcat, bzip2, cal, cat, chgrp, chmod, chown, chpasswd,
+   chroot, chvt, clear, cmp, cp, cpio, crond, crontab, cttyhack, cut, date,
+   dc, dd, deallocvt, depmod, devmem, df, diff, dirname, dmesg, dnsdomainname,
+   dos2unix, dpkg, dpkg-deb, du, dumpkmap, dumpleases, echo, ed, egrep, env,
+   expand, expr, false, fdisk, fgrep, find, fold, free, freeramdisk, fstrim,
+   ftpget, ftpput, getopt, getty, grep, groups, gunzip, gzip, halt, head,
+   hexdump, hostid, hostname, httpd, hwclock, id, ifconfig, ifdown, ifup,
+   init, insmod, ionice, ip, ipcalc, kill, killall, klogd, last, less, ln,
+   loadfont, loadkmap, logger, login, logname, logread, losetup, ls, lsmod,
+   lzcat, lzma, lzop, lzopcat, md5sum, mdev, microcom, mkdir, mkfifo, mknod,
+   mkswap, mktemp, modinfo, modprobe, more, mount, mt, mv, nameif, nc,
+   netstat, nslookup, od, openvt, passwd, patch, pidof, ping, ping6,
+   pivot_root, poweroff, printf, ps, pwd, rdate, readlink, realpath, reboot,
+   renice, reset, rev, rm, rmdir, rmmod, route, rpm, rpm2cpio, run-parts, sed,
+   seq, setkeycodes, setsid, sh, sha1sum, sha256sum, sha512sum, sleep, sort,
+   start-stop-daemon, stat, static-sh, strings, stty, su, sulogin, swapoff,
+   swapon, switch_root, sync, sysctl, syslogd, tac, tail, tar, taskset, tee,
+   telnet, telnetd, test, tftp, time, timeout, top, touch, tr, traceroute,
+   traceroute6, true, tty, tunctl, udhcpc, udhcpd, umount, uname, uncompress,
+   unexpand, uniq, unix2dos, unlzma, unlzop, unxz, unzip, uptime, usleep,
+   uudecode, uuencode, vconfig, vi, watch, watchdog, wc, wget, which, who,
+   whoami, xargs, xz, xzcat, yes, zcat
+
+Busybox implements support for the init program, which is essential in
+starting a Linux environment. It is much simpler that the full
+implementation, but it still offers compatibility with the
+*/etc/inittab* configuration file that is used to start services.
+
+The inittab format is pretty simple: *<id>:<action>:<command to run>*,
+where:
+
+* *id* is an id for the services
+
+* *action* is
+
+  * *respawn* if we want the process restarted when it terminates
+
+  * *sysinit* if this process should only run once when the system
+    boots
+
+
+Here is a very simple example that runs the */etc/rcS* script at boot
+time, starts and respawn a shell on the serial console, and runs the
+login utility on 5 the virtual terminals.
+
+.. code-block:: c
+
+   ::sysinit:/etc/rcS
+   ttyAMA0::respawn:-/bin/sh
+   ::respawn:/sbin/getty 38400 tty1
+   ::respawn:/sbin/getty 38400 tty2
+   ::respawn:/sbin/getty 38400 tty3
+   ::respawn:/sbin/getty 38400 tty4
+   ::respawn:/sbin/getty 38400 tty5
+
+
+Linux root filesystem
+======================
+
+The root filesystem is the filesystem the kernel mounts before
+executing the init process. Linux supports multiple types of root
+filesystems: initrd (initial ram disk), NFS root (root filesystem over
+the network) or a "regular" block filesystem.
+
+
+initrd
+------
+
+initrd is used small embedded systems where we don't need a block
+filesystem. In this case the bootloader loads a small cpio (.gz)
+archive in memory and announce this to the kernel. The kernel will
+decompress this archive in the special rootfs filesystem (which is a
+ram based virtual filesystem).
+
+.. note:: Most bootloaders have special boot commands or arguments to
+	  boot commands that tells the kernel about where in RAM is
+	  initrd located (e.g. bootz in u-boot, initrd in boot). In
+	  case of qemu, you can specify the initrd with the *-initrd*
+	  flag.
+
+It is also used by distributions that address a large base of
+different types of systems and where not all block devices or
+filesystems are compiled in the kernel to keep the kernel images
+small. In this case the distributions create an initrd that is
+tailored to the system where the distribution is being installed which
+contains the kernel modules needed to mount the root filesystem
+(usually uncommon block device drivers, bus controller or
+filesystems).
+
+NFS root
+--------
+
+NFS root is the setup where the root filesystem is mounted over the
+networking, from a Network File Server. This setup is activated when
+the *nfsroot* option is passed to the kernel. It has the following
+syntax:
+
+.. code-block:: shell
+
+   nfsroot=[<server-ip>:]<root-dir>[,<nfs-options>]
+
+This setup also requires early IP configuration, before userspace
+boots. This can be accomplished by setting another kernel options,
+*ip*:
+
+.. code-block:: shell
+
+   ip=<client-ip>:<server-ip>:<gw-ip>:<netmask>:<hostname>:<device>:<autoconf>:<dns0-ip>:<dns1-ip>
+
+The most common way to use this option is "ip=dhcp" (the *autoconf*
+parameter can appear alone as the value to the *ip* parameter).
+
+For details see about these options see
+*Documentation/filesystems/nfs/nfsroot.txt*.
+
 
 Exercises
 =========
 
-Installing cross-compiler
--------------------------
+1. Installing cross-compiler
+----------------------------
 
 For this task we will install an ARM cross-compiler on an x86
 system. Use the system package manager utility to install a gcc ARM
@@ -503,8 +661,8 @@ Next, lets verify that this binary can be run on ARM platforms.
 	     tools/labs$ qemu-arm-static ./a.out
 	     Hello world!
 
-Download and run Yocto precompiled images
------------------------------------------
+2. Download and run Yocto precompiled images
+---------------------------------------------
 
 Download a Yocto qemu image for ARM and run it in full system
 emulation.
@@ -573,8 +731,8 @@ Download qemu rootfs image and boot to userspace.
 	  filesystem neesd to be mounted
 
 
-Configure and build kernel
---------------------------
+3. Configure and build kernel
+-----------------------------
 
 Configure your own kernel, build it and boot it. Make sure to change
 the -kernel and -dtb options to point to the new files (see `Kernel
@@ -651,8 +809,8 @@ Verify that you have booted your own compiled kernel.
 .. hint:: Check the /proc/version file.
 
 
-u-boot configuration and boot
------------------------------
+4. u-boot configuration and boot
+--------------------------------
 
 Download the uboot source from git://git.denx.de/u-boot.git and
 checkout at v2017.05 tag. Then build an image for the
@@ -691,8 +849,8 @@ serial:
    Net:   smc911x-0
    Hit any key to stop autoboot:  2
 
-U-boot basic commands
----------------------
+5. U-boot basic commands
+-------------------------
 
 Inspect the environment variables and determine the list and order of
 the boot methods the bootloader will try, based on the curret /
@@ -703,8 +861,8 @@ default configuration.
 	  commands and variables it jumps through
 
 
-U-boot: load and boot kernel from mmc
--------------------------------------
+6. U-boot: load and boot kernel from mmc
+-----------------------------------------
 
 For this task we want to prepare an SD card image based on the
 downloaded Yocto image and use it to boot the system using u-boot.
@@ -843,8 +1001,8 @@ boot the kernel. Review the `Booting from eMMC`_  section.
 .. hint:: Note that in our case the emulated SD card is not partition,
 	  so avoid passing one to the ext4load commands.
 
-U-boot: load and boot kernel from network
------------------------------------------
+7. U-boot: load and boot kernel from network
+--------------------------------------------
 
 For this task we want to load the kernel and DTB from the network. To
 do so, we need to add a netwoking device to the qemu configuration and
@@ -864,3 +1022,99 @@ First we need to setup a tap interface. Use the
 
 Next, use the tftpboot command to load the zImage and dtb file (see
 `Booting via TFTP`_).
+
+
+8. Minimal rootfs with busybox
+-------------------------------
+
+For this task we will create a minimum root filesystem from scratch
+and boot it with qemu setup for the *vexpress* machine we prepared for
+`6. U-boot: load and boot kernel from mmc`_. To keep things simple we
+will not use u-boot, we will just boot directly the kernel image.
+
+Lets start with compiling busybox. Download the busybox tree with:
+
+.. code-block:: shell
+
+   $ git clone git://busybox.net/busybox.git
+
+Use the default config and built the busybox for the ARM, using the
+cross-compiler.
+
+.. hint:: If you run into the following error:
+
+	  .. code-block:: shell
+
+	     CC      applets/applets.o
+	     In file included from include/libbb.h:13:0,
+	     from include/busybox.h:8,
+	     from applets/applets.c:9:
+			  include/platform.h:157:23: fatal error: byteswap.h: No such file or directory
+			  # include <byteswap.h>
+			  ^
+	     compilation terminated.
+
+	  it probably means that the wrong cross-compiler was
+	  used. Make sure the arm-linux-gnueabi- variant is used.
+
+Verify that you can run the compiled busybux using the qemu in
+userspace emulation mode.
+
+.. hint:: If you run into this error:
+
+	  .. code-block:: shell
+
+	     tools/labs $ qemu-arm-static busybox
+	     /lib/ld-linux.so.3: No such file or directory
+
+	  you need to re-compile busybox statically. Use the
+	  *menuconfig* target tu select this option.
+
+Now that we have busybox compiled we can start creating a cpio archive
+for the initrd image. Place busybox at the following path
+*/bin/busybox* inside the cpio archive and try to boot from
+initrd. Add "rdinit=/bin/busybox" to the kernel command line to select
+which program the kernel will run (default is /init).
+
+.. hint:: Create a temporary directory (e.g. *tmp*) and place busybox
+	  at /tmp/bin/busybox then issue the following command to
+	  create the initrd.cpio.gz archive:
+
+	  .. code-block:: shell
+
+	     cd tmp; find . | cpio -o -H newc > ../initrd.cpio; cd -
+	     gzip -f initrd.cpio
+
+.. note:: The boot will still crash, because just running /bin/busybox
+	  will print the available commands and exit.
+
+Next create a link /bin/sh to /bin/busybox in the cpio archive and try
+to boot /bin/sh this time.
+
+.. note:: You will notice that this time the system will boot to
+	  userspace. However, there is not much we can do:
+
+	  .. code-block:: shell
+
+	     / # ls
+	     /bin/sh: ls: not found
+	     / # df -h
+	     /bin/sh: df: not found
+
+
+Use the --install -s option to create the links for all available
+internal commands to /bin/busybox.
+
+.. hint:: If you are seeing errors like:
+
+	  .. code-block:: shell
+
+	     busybox: /usr/bin/whois: No such file or directory
+	     busybox: /usr/bin/xargs: No such file or directory
+
+	  create the missing directories.
+
+Notice that some programs like mount do not function properly because
+important virtual filesystems are not mounted. Use the initrd template
+from *tools/labs/templates/kernel_uboot/initrd/* to create a minimal
+functional image.
