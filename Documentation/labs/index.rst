@@ -16,6 +16,7 @@ driver topics. For each topic there are two parts:
 .. toctree::
 
    kernel-uboot.rst
+   app_dev_debug.rst
    vm.rst
    exercises.rst
    kernel_modules.rst
@@ -25,4 +26,4 @@ driver topics. For each topic there are two parts:
    deferred_work.rst
    memory_mapping.rst
    device_model.rst
-   app_dev_debug.rst
+
