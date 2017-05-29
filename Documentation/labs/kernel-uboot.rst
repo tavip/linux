@@ -118,7 +118,7 @@ The most important parameters related to devices are:
 
 * *-serial* *backend* add a serial port and redirect its output to a
   backend. There are multiple backends evailable: pty, chardev, file,
-  stdio, pipe, udp, tcp, etc. See **man quemu-system-arm** for a
+  stdio, pipe, udp, tcp, etc. See **man qemu-system-arm** for a
   description of each of these.
 
   To keep things similar as with connected to a physical embedded
@@ -129,7 +129,7 @@ The most important parameters related to devices are:
   connect on serial ports (/dev/ttyS0, /dev/ttyUSB0).
 
   Note that the pts descriptors are allocated dynamically so you will
-  have to check the quemu output to learn to which device to connect:
+  have to check the qemu output to learn to which device to connect:
 
   .. code-block:: shell
 
@@ -728,8 +728,12 @@ Download qemu rootfs image and boot to userspace.
 	     [    7.122458] User configuration error - no valid root filesystem found
 
 	  you need to tell the kernel what is the device that the root
-	  filesystem neesd to be mounted
+	  filesystem neesd to be mounted. You can do that by using
+	  the *append* option to qemu:
 
+	  .. code-block:: shell
+
+	     qemu-system-arm .... --append "root=/dev/sda"
 
 3. Configure and build kernel
 -----------------------------
@@ -895,7 +899,6 @@ verify that it boots using qemu.
 	  [<80900ed8>] (kernel_init_freeable) from [<806547ac>] (kernel_init+0x8/0x110)
 	  [<806547ac>] (kernel_init) from [<80107638>] (ret_from_fork+0x14/0x3c)
 	  ---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block()
-
 
 .. hint:: If you don't see any boot messages on the serial port use
 	  the "console=ttyAMA0". The default config for this platform
