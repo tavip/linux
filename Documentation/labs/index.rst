@@ -15,6 +15,7 @@ driver topics. For each topic there are two parts:
 
 .. toctree::
 
+   setup.rst
    kernel-uboot.rst
    app_dev_debug.rst
    vm.rst
