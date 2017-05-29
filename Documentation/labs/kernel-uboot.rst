@@ -585,7 +585,7 @@ cross-compiler.
 
 	  .. code-block:: shell
 
-	     $ sudo apt-get install gcc-arm-none-gnueabi gcc-arm-linux-gnueabi
+	     $ sudo apt-get install gcc-arm-linux-gnueabi gcc-arm-none-eabi
 
 For the next task compile a basic hello world program:
 
