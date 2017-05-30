@@ -83,14 +83,14 @@ type (``block`` or ``character``), ``major`` and ``minor`` of the device
 (``mknod name type major minor``). Thus, if you want to create a character device
 named ``mycdev`` with the major ``42`` and minor ``0``, use the command:
 
-.. code-block:: c
+.. code-block:: bash
 
    $ mknod /dev/mycdev c 42 0
 
 To create the block device with the name mybdev with the 240 and minor 0 
 command used will be:
 
-.. code-block:: c
+.. code-block:: bash
 
    $ # mknod /dev/mybdev b 240 0
 
@@ -176,7 +176,7 @@ data.
 The file structure contains, among many fields:
 
    * ``f_mode``, which specifies read ``FMODE_READ`` (``FMODE_READ``) or write
-    (``FMODE_WRITE``);
+     (``FMODE_WRITE``);
    * ``f_flags``, which specifies the file opening flags (``O_RDONLY``,
      ``O_NONBLOCK``, ``O_SYNC``, ``O_APPEND``, ``O_TRUNC``, etc.);
    * ``f_op``, which specifies the operations associated with the file (pointer to
@@ -671,22 +671,19 @@ can be used by the functions/macros:
 
 The roles of the macros / functions above are:
 
-   * ``init_waitqueue_head`` initializes the queue; if you want to initialize the
-     queue to compile, you can use the ``DECLARE_WAIT_QUEUE_HEAD`` macro;
-
-   * ``wait_event`` and ``wait_event_interruptible`` adds the current thread to the
+   * :c:func:`init_waitqueue_head` initializes the queue; if you want to initialize the
+     queue to compile, you can use the c:macro:`DECLARE_WAIT_QUEUE_HEAD` macro;
+   * :c:func:`wait_event` and :c:func:`wait_event_interruptible` adds the current thread to the
      queue while the condition is false, sets it to TASK_UNINTERRUPTIBLE or
      TASK_INTERRUPTIBLE and calls the scheduler to schedule a new thread; Waiting
-     will be interrupted when another thread will call the wake_up function; 
-   * ``wait_event_timeout`` and ``wait_event_interruptible``_timeout have the same
+     will be interrupted when another thread will call the wake_up function;
+   * :c:func:`wait_event_timeout` and :c:func:`wait_event_interruptible_timeout` have the same
      effect as the above functions, only waiting can be interrupted at the end of 
      the timeout received as a parameter;
-
-   * ``wake_up`` puts all threads off from state TASK_INTERRUPTIBLE and
+   * :c:func:`wake_up` puts all threads off from state TASK_INTERRUPTIBLE and
      TASK_UNINTERRUPTIBLE in TASK_RUNNING status; Remove these threads from the
      queue;
-
-   * ``wake_up_interruptible`` same action, but only threads with TASK_INTERRUPTIBLE
+   * :c:func:`wake_up_interruptible` same action, but only threads with TASK_INTERRUPTIBLE
      status are TASK_INTERRUPTIBLE . 
 
 A simple example is that of a thread waiting to change the value of a flag. The
@@ -717,86 +714,30 @@ While another thread will change the flag value and wake up the waiting threads:
 
 
 Exercises
----------
+=========
 
-To run the lab, we start from the laboratory 's task archive . We download and
-decompress the archive into the so2/ directory of the student's home
-directory on the base system:
+.. important::
 
-Within the lab04 lab04-tasks/ directory, resources are available to develop the 
-exercises below: source code skeleton files, Makefile and Kbuild files,
-scripts, and test programs.
+    .. include:: exercises-summary.hrst
+    .. |LAB_NAME| replace:: device_drivers
 
-We will develop exercises on the base system and then test them on the QEMU
-virtual machine . After editing and compiling a kernel module,
-we will copy it to the dedicated QEMU virtual machine directory using a form 
-command:
+0. Intro
+--------
 
-.. code-block:: c
+Using `LXR <http://elixir.free-electrons.com/linux/latest/source>`_ find the definitions
+of the following symbols in the Linux kernel:
 
-student@asgard:~/so2$ cp /path/to/module.ko ~/so2/qemu-so2/fsimg/root/modules/
-
-Where /path/to/module.ko is the path to the object file for the kernel module. 
-Then we will start from the ~/so2/qemu-so2/ , the QEMU virtual machine using 
-the command
-
-.. code-block:: c
-
-   student@asgard:~/so2/qemu-so2$ make
-
-After starting the QEMU virtual machine, we will be able to use commands in the 
-QEMU window to load and download the kernel module:
-
-.. code-block:: c
-
-# insmod modules/module-name.ko
-# rmmod module/module-name
-
-Where module-name is the name of the kernel module.
-
-For laboratory development, it is recommended to use three terminals or, 
-better, three terminal tabs. To open a new terminal tab, use the Ctrl+Shift+t 
-key combination. The three terminal tabs fulfill the following roles:
-
-    At the first tab we develop the kernel module: editing, compiling, copying 
-to the dedicated QEMU virtual machine directory. We work in the resulting 
-directory resulting from the decompression of the laboratory's task archive.
-    On the second tab, we start the QEMU virtual machine and then test the 
-kernel module: load / unload mode, run tests. We work in the directory of the 
-virtual machine: ~/so2/qemu-so2/ .
-    On the third tab we start the minicom or UDP server to receive the 
-netconsole messages . It does not matter in which director we are. We use the 
-command
+    * :c:type:`struct file`
+    * :c:type:`struct file_operations`
+    * :c:type:`generic_ro_fops`
+    * :c:func:`vfs_read`
 
 
-    To create a kernel module, use the resources in the kernel/ directory 
-kernel/ .
-    To create a test module, use the resources in the user/ directory.
-    Tasks will be resolved by completing the kernel/so2_cdev.c with new 
-features.
-    Watch the contents of the kernel/so2_cdev.c so2_cdev.c file and use the 
-defined macros.
-    Read carefully all the details of an exercise before you begin solving it. 
+1. Register/unregister
+----------------------
 
-Intro
------
-
-Identify, using cscope or LXR , the definitions of the following symbols:
-
-    * ``struct file``
-    * ``struct file_operations``
-    * ``generic_ro_fops``
-    * ``vfs_read, ``new_sync_red``and ``generic_file_read_iter``.
-
-Follow the definition of the ``vfs_read`` function. Notice that for a device that
-does not have the read function or the ``read_iter`` function will call
-``new_sync_read`` . This function uses ``read_iter`` which by default is defined at
-``generic_file_read_iter``.
-
-Register a device of character type
----------------------------------
-The driver will control a single device with the MY_MAJOR major and minor
-MY_MINOR (the macros defined in the kernel/so2_cdev.c file).
+The driver will control a single device with the ``MY_MAJOR`` major and
+``MY_MINOR`` minor (the macros defined in the kernel/so2_cdev.c file).
 As a first step, you will need to create the /dev/so2_cdev character
 /dev/so2_cdev using the mknod utility.
 
@@ -826,8 +767,8 @@ Identify the device type recorded after major 42 . Note that device types (ie
 major) and actual devices (i.e. minors) appear in /proc/devices.
 
 .. note:: Entries to /dev are not created by inserting the module. These can be created 
-   in two ways: Manually, using the mknod command as we will do in the following exercises.
-   Automatically using udev daemon; We will not insist on this in SO2 laboratories 
+          in two ways: Manually, using the mknod command as we will do in the following exercises.
+          Automatically using udev daemon; We will not insist on this in SO2 laboratories 
 
 Unload the kernel module:
 
@@ -862,7 +803,7 @@ reading, and closing functions implemented.
       error message because the driver does not implement the reading function in the 
       file. 
 
-.. info:: The prototype of a device driver's operations is in the file_operations 
+.. note:: The prototype of a device driver's operations is in the file_operations 
           structure. Go to the open and release section.
 
 Access restriction
@@ -880,16 +821,17 @@ the driver.
    4. Reset the variable in the release function to retrieve access to the device.
    5. To test your deployment, you'll need to simulate a long-term use of your 
       device. Call the scheduler at the end of the device opening:
-.. code-block:: c
+
+.. code-block:: bash
 
       set_current_state(TASK_INTERRUPTIBLE);
       schedule_timeout(1000);
 
     6. Test using ``cat /dev/so2_cdev`` & ``cat /dev/so2_cdev``.
 
-.. info:: Before testing, the device /dev/so2_cdev must be created.
+.. note:: Before testing, the device /dev/so2_cdev must be created.
 
-.. info:: The advantage of the atomic_cmpxchg function is that it can check the
+.. note:: The advantage of the atomic_cmpxchg function is that it can check the
           old value of the variable and set it up to a new value, all in one
           atomic operation. More details about the function parameters can be found here .
           An example of use is here .
@@ -913,11 +855,12 @@ Implement the read function in the driver:
       from the kernel space buffer to the user space buffer.
    6. After implementation, test using cat /dev/so2_cdev/
 
-.. info:: The cat /dev/so2_cdev of the cat /dev/so2_cdev does not end (use Ctrl+C ).
+.. note:: The cat /dev/so2_cdev of the cat /dev/so2_cdev does not end (use Ctrl+C ).
           Read the read and write sections and Access to the address space of the lab 
           process.
           If you want to display the offset value use a construction of the form:
-          ``pr_info("Offset: %lld \n", *offset)``; It's important that the %lld lld display modifier           is a display for a long long int data type. The data type loff_t (used by offset )
+          ``pr_info("Offset: %lld \n", *offset)``; It's important that the %lld lld display modifier
+          is a display for a long long int data type. The data type loff_t (used by offset )
           is a typedef for long long int.
 
 The command ``cat`` reads to the end of the file, and the end of the file is
@@ -932,7 +875,7 @@ Modify the driver so that the ``cat`` commands ends:
     3. Ensure that the read function returns the number of bytes that were copied
        into the user buffer. 
 
-..info:: By dereferencing the offset parameter it is possible to read and move the current
+..note:: By dereferencing the offset parameter it is possible to read and move the current
          position in the file. Its value needs to be updated every time a read is done 
          successfully.
 
@@ -946,12 +889,14 @@ Ignore the offset parameter at a time. You can assume that the driver buffer is
 large enough. You do not need to check the validity of the write argument's 
 size argument.
 
-.. info:: The prototype of a device driver's operations is in the file_operations 
+.. note:: The prototype of a device driver's operations is in the file_operations 
           structure.
           Test using commands:
-          .. code-block:: c
-             echo "arpeggio"> /dev/so2_cdev
-             cat /dev/so2_cdev
+
+.. code-block:: bash
+
+   echo "arpeggio"> /dev/so2_cdev
+   cat /dev/so2_cdev
          
           Read the read and write sections and Access to the address space of the lab 
           process.
@@ -970,12 +915,12 @@ For this:
       ioctl for the device file.
    3. Use printk to display the message in the driver. 
 
-.. info:: The macro definition MY_IOCTL_PRINT is defined in the include/so2_cdev.h file
+.. note:: The macro definition MY_IOCTL_PRINT is defined in the include/so2_cdev.h file
           in the include/so2_cdev.h task archive (uses _IOC to define the _IOC)
           Read the ioctl and open and release sections in the lab.
 
-.. info:: To compile the user space source code use the gcc-5 . To do this, run the 
-command: ``/usr/bin/gcc-5 -m32 -static -Wall -g -o so2_cdev_test so2_cdev_test.c``.
+.. note:: To compile the user space source code use the gcc-5 . To do this, run the 
+          command: ``/usr/bin/gcc-5 -m32 -static -Wall -g -o so2_cdev_test so2_cdev_test.c``.
 
 The executable result should be copied to the virtual machine just like the 
 kernel module and run it on the virtual machine to validate the correct ioctl 
@@ -991,7 +936,7 @@ message associated with the driver. Use fixed-length buffer ( BUFFER_SIZE ).
       * MY_IOCTL_GET_BUFFER to read a message from your device.
    2. Change the user-space program to allow for testing.
 
-.. info:: Read the ioctl sections and Access to the address space of the lab process.
+.. note:: Read the ioctl sections and Access to the address space of the lab process.
 
 Ioctl with waiting queues
 -------------------------
@@ -1012,4 +957,4 @@ run the queue command open a new console in the virtual machine with Alt+F2 ;
 You can return to the previous console with Alt+F1 . If you're connected via 
 SSH to the virtual machine, open a new console.
 
-.. info:: Read the ioctl and Synchronization sections - waiting queues in the lab.
+.. note:: Read the ioctl and Synchronization sections - waiting queues in the lab.
