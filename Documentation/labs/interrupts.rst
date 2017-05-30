@@ -197,8 +197,8 @@ and then reads it:
    outb(value, MY_BASEPORT);
    value = inb(MY_BASEPORT);
 
-Accessing I/O ports from userspace
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+5. Accessing I/O ports from userspace
+-------------------------------------
 
 Although the functions described above are defined for device drivers,
 they can also be used in user space by including the <sys/io.h>
@@ -676,8 +676,16 @@ Linux device drivers
 Exercises
 =========
 
-Intro
------
+.. important::
+
+   .. include:: exercises-summary.hrst
+
+   .. |LAB_NAME| replace:: interrupts
+
+   Generate the skeleton for this lab (task name should be empty).
+
+0. Intro
+--------
 
 Find the definitions of the following symbols in the Linux kernel:
 
@@ -691,24 +699,16 @@ Analize the following Linux code:
 * Keyboard initialization function :c:func:`i8042_setup_kbd`
 * The AT or PS/2 keyboard interrupt function :c:func:`atkbd_interrupt`
 
-Keyboard driver
----------------
+1. Keyboard driver
+------------------
 
 The next exercise's objective is to create a driver that uses the
 keyboard IRQ, inspect the incoming key codes and stores them in a
 buffer. The buffer will be accessible from userspace via character
 device driver.
 
-Start by creating a fresh workspace generating skeleton driver for
-*interrupts*:
-
-.. code-block:: shell
-
-   tools/labs $ make clean
-   tools/labs $ LABS=interrupts make skels
-
-Request the I/O ports
-~~~~~~~~~~~~~~~~~~~~~
+2. Request the I/O ports
+------------------------
 
 The *kbd.c* file contains a skeleton for the keyboard driver. Browse
 the source code and inspect :c:func:`kbd_init`. Notice that the I/O
@@ -730,7 +730,7 @@ Now start the VM and insert the module:
 
 .. code-block:: shell
 
-   rroot@qemux86:~# skels/interrupts/kbd.ko
+   root@qemux86:~# skels/interrupts/kbd.ko
    kbd: loading out-of-tree module taints kernel.
    insmod: can't insert 'skels/interrupts/kbd.ko': Device or resource busy
 
@@ -783,8 +783,8 @@ Lets remove the module and check that the I/O ports are released:
    root@qemux86:~# cat /proc/ioports | grep kbd
    root@qemux86:~#
 
-Interrupt handling routine
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+3. Interrupt handling routine
+-----------------------------
 
 For his task we will implement and register an interrupt handler for
 the keyboard interrupt. You can review the `Requesting an interrupt`_
@@ -836,8 +836,8 @@ keyboard interrupt is generated.
 .. attention:: To get access to the keyboard on the virtual machine
 	       boot with "QEMU_DISPLAY=sdl make boot".
 
-Store ASCII keys to buffer
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+4. Store ASCII keys to buffer
+-----------------------------
 
 Next, we want to collect the keystrokes in a buffer whose content we
 will then send to the user space. For this routine we will add the
