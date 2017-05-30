@@ -880,25 +880,25 @@ verify that it boots using qemu.
 
 	  .. code-block:: shell
 
-	  VFS: Cannot open root device "sda" or unknown-block(0,0): error -6
-	  Please append a correct "root=" boot option; here are the available partitions:
-	  1f00          131072 mtdblock0
-	  (driver?)
-	  1f01           32768 mtdblock1
-	  (driver?)
-	  Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
-	  CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.12.0-rc1+ #18
-	  Hardware name: ARM-Versatile Express
-	  [<8010f2e0>] (unwind_backtrace) from [<8010b7e8>] (show_stack+0x10/0x14)
-	  [<8010b7e8>] (show_stack) from [<803b1f10>] (dump_stack+0x94/0xa8)
-	  [<803b1f10>] (dump_stack) from [<801d4d58>] (panic+0xdc/0x254)
-	  [<801d4d58>] (panic) from [<8090123c>] (mount_block_root+0x1c0/0x294)
-	  [<8090123c>] (mount_block_root) from [<8090142c>] (mount_root+0x11c/0x124)
-	  [<8090142c>] (mount_root) from [<8090158c>] (prepare_namespace+0x158/0x1a0)
-	  [<8090158c>] (prepare_namespace) from [<80900ed8>] (kernel_init_freeable+0x270/0x28)
-	  [<80900ed8>] (kernel_init_freeable) from [<806547ac>] (kernel_init+0x8/0x110)
-	  [<806547ac>] (kernel_init) from [<80107638>] (ret_from_fork+0x14/0x3c)
-	  ---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block()
+	     VFS: Cannot open root device "sda" or unknown-block(0,0): error -6
+	     Please append a correct "root=" boot option; here are the available partitions:
+	     1f00          131072 mtdblock0
+	     (driver?)
+	     1f01           32768 mtdblock1
+	     (driver?)
+	     Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
+	     CPU: 0 PID: 1 Comm: swapper/0 Not tainted 4.12.0-rc1+ #18
+	     Hardware name: ARM-Versatile Express
+	     [<8010f2e0>] (unwind_backtrace) from [<8010b7e8>] (show_stack+0x10/0x14)
+	     [<8010b7e8>] (show_stack) from [<803b1f10>] (dump_stack+0x94/0xa8)
+	     [<803b1f10>] (dump_stack) from [<801d4d58>] (panic+0xdc/0x254)
+	     [<801d4d58>] (panic) from [<8090123c>] (mount_block_root+0x1c0/0x294)
+	     [<8090123c>] (mount_block_root) from [<8090142c>] (mount_root+0x11c/0x124)
+	     [<8090142c>] (mount_root) from [<8090158c>] (prepare_namespace+0x158/0x1a0)
+	     [<8090158c>] (prepare_namespace) from [<80900ed8>] (kernel_init_freeable+0x270/0x28)
+	     [<80900ed8>] (kernel_init_freeable) from [<806547ac>] (kernel_init+0x8/0x110)
+	     [<806547ac>] (kernel_init) from [<80107638>] (ret_from_fork+0x14/0x3c)
+	     ---[ end Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block()
 
 .. hint:: If you don't see any boot messages on the serial port use
 	  the "console=ttyAMA0". The default config for this platform
