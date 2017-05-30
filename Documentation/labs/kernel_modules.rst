@@ -4,6 +4,10 @@ Kernel modules
 
 .. slideconf::
    :theme: single-level
+   :autoslides: false
+
+.. slide:: Kernel modules
+   :level: 1
 
 Lab objectives
 ==============
@@ -12,6 +16,16 @@ Lab objectives
 * describing the process of kernel module compilation
 * presenting how a module can be used with a kernel
 * simple kernel debugging methods
+
+.. slide:: What is a kernel module?
+   :level: 2
+
+   * object file (``*.ko``)
+   * extends functionality of the Linux kernel
+   * Y vs M
+   * can be loaded at runtime
+   * insmod/rmmod
+   * modprobe
 
 Overview
 ========
@@ -34,6 +48,32 @@ An example of kernel module
 Below is a very simple example of kernel module. When loading into the kernel,
 it will generate the message "Hi". When unloading the kernel module, the "Bye"
 message will be generated.
+
+.. slide:: Hello World!
+   :level: 2
+
+   .. code-block:: c
+   
+       #include <linux/kernel.h>
+       #include <linux/init.h>
+       #include <linux/module.h>
+        
+       MODULE_DESCRIPTION("Simple hello world kernel module");
+       MODULE_AUTHOR("Me");
+       MODULE_LICENSE("GPL");
+        
+       static int dummy_init(void)
+       {
+               pr_debug("Hi\n");
+               return 0;
+       }
+       static void dummy_exit(void)
+       {
+               pr_debug("Bye\n");
+       }
+        
+       module_init(dummy_init);
+       module_exit(dummy_exit);
 
 .. code-block:: c
 
@@ -86,6 +126,29 @@ compilation method (kbuild). This method requires the use of two files:
 a Makefile and a Kbuild file.
 
 Below is an example of a Makefile:
+
+.. slide:: Kernel module compilation
+   :level: 2
+
+   * use ``Kbuild`` build system
+   * **in tree** vs **out of tree**
+
+   .. code-block:: bash
+      
+      # Makefile
+      KDIR = /lib/modules/`uname -r`/build
+       
+      kbuild:
+              make -C $(KDIR) M=`pwd`
+       
+      clean:
+              make -C $(KDIR) M=`pwd` clean
+
+   .. code-block:: bash
+
+      # Kbuild
+      EXTRA_CFLAGS = -Wall -g
+      obj-m        = modul.o
 
 .. code-block:: bash
    
@@ -221,6 +284,49 @@ command or by inspecting the ``/proc/modules``, ``/sys/module`` directories.
 
 Debugging
 =========
+
+.. slide:: printk
+   :level: 2
+
+   * more or less similar with printf
+
+   .. code-block:: bash
+
+      printk(KERN_DEBUG "Hello!\n");
+      pr_debug("Hello!\n");
+
+   * 8 log levels (0 - KERN_EMERG, 7 - KERN_DEBUG)
+   * console, kernel buffer, dmesg
+
+   .. code-block:: bash
+
+      $ cat /proc/sys/kernel/printk
+              7       4       1       7
+              current default minimum boot-time-default
+
+.. slide:: Debugging
+   :level: 2
+
+   .. code-block:: bash
+
+      BUG: unable to handle kernel paging request at 00001234
+      IP: [<c89d4005>] my_oops_init+0x5/0x20 [oops]
+
+
+   * oops vs panic
+
+   .. code-block:: bash
+
+      $ cat /proc/modules
+      oops 1280 1 - Loading 0xc89d4000
+
+   .. code-block:: bash
+
+      $ objdump -dS --adjust-vma=0xc89d4000 oops.ko
+
+   .. code-block:: bash
+
+      $ addr2line -e oops.o 0x5
 
 Troubleshooting a kernel module is much more complicated than debugging a
 regular program. First, a mistake in a kernel module can lead to blocking the
