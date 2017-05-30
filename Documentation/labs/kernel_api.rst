@@ -4,6 +4,10 @@ Kernel API
 
 .. slideconf::
    :theme: single-level
+   :autoslides: false
+
+.. slide:: Kernel API
+   :level: 1
 
 Lab objectives
 ==============
@@ -11,6 +15,16 @@ Lab objectives
   * Familiarize yourself with the basic Linux kernel API
   * Description of memory allocation mechanisms
   * Description of locking mechanisms 
+
+.. slide:: Basic concepts
+   :level: 2
+
+   * API vs ABI
+   * hardware <> kernel <> userspace
+   * different from userspace
+   * kernel is a standalone entity
+   * no libraries (glibc, etc)
+   * reimplementation for some common functions
 
 Overview
 ========
@@ -70,6 +84,20 @@ be avoided.
 
 Contexts of execution
 =====================
+
+.. slide:: Contexts of execution
+   :level: 2
+
+   * process context
+
+     * system call
+     * kernel thread
+
+   * interrupt context
+
+     * hardware interrupt
+     * deferrable action
+
 
 In relation to kernel execution, we distinguish two contexts: process context
 and interrupt context. We are in the process context when we run code as a
@@ -183,16 +211,35 @@ level exceeds the default level set on the console.
 To reduce the size of lines when using printk, it is recommended to use the 
 following help functions instead of directly using the printk call:
 
+.. slide:: printk
+   :level: 2
+
+    * logs to console or kernel buffer
+    * ``pr_debug`` is special
+
+      * dyn_dbg, ``DEBUG``
+
+   .. code-block:: c
+   
+      pr_emerg(fmt, ...);
+      pr_alert(fmt, ...);
+      pr_crit(fmt, ...);
+      pr_err(fmt, ...);
+      pr_warning(fmt, ...);
+      pr_warn(fmt, ...);
+      pr_notice(fmt, ...);
+      pr_info(fmt, ...);
+
 .. code-block:: c
 
-   pr_emerg(fmt, ...); /* echivalent cu printk(KERN_EMERG pr_fmt(fmt), ...); */
-   pr_alert(fmt, ...); /* echivalent cu printk(KERN_ALERT pr_fmt(fmt), ...); */
-   pr_crit(fmt, ...); /* echivalent cu printk(KERN_CRIT pr_fmt(fmt), ...); */
-   pr_err(fmt, ...); /* echivalent cu printk(KERN_ERR pr_fmt(fmt), ...); */
-   pr_warning(fmt, ...); /* echivalent cu printk(KERN_WARNING pr_fmt(fmt), ...); */
-   pr_warn(fmt, ...); /* echivalent cu cu printk(KERN_WARNING pr_fmt(fmt), ...); */
-   pr_notice(fmt, ...); /* echivalent cu printk(KERN_NOTICE pr_fmt(fmt), ...); */
-   pr_info(fmt, ...); /* echivalent cu printk(KERN_INFO pr_fmt(fmt), ...); */
+   pr_emerg(fmt, ...); /* similar with printk(KERN_EMERG pr_fmt(fmt), ...); */
+   pr_alert(fmt, ...); /* similar with printk(KERN_ALERT pr_fmt(fmt), ...); */
+   pr_crit(fmt, ...); /* similar with printk(KERN_CRIT pr_fmt(fmt), ...); */
+   pr_err(fmt, ...); /* similar with printk(KERN_ERR pr_fmt(fmt), ...); */
+   pr_warning(fmt, ...); /* similar with printk(KERN_WARNING pr_fmt(fmt), ...); */
+   pr_warn(fmt, ...); /* similar with cu printk(KERN_WARNING pr_fmt(fmt), ...); */
+   pr_notice(fmt, ...); /* similar with printk(KERN_NOTICE pr_fmt(fmt), ...); */
+   pr_info(fmt, ...); /* similar with printk(KERN_INFO pr_fmt(fmt), ...); */
 
 A special case is pr_debug that calls the printk function only when the DEBUG 
 macro is defined or if dynamic debugging is used.
@@ -200,6 +247,21 @@ macro is defined or if dynamic debugging is used.
 
 Memory allocation
 -----------------
+
+.. slide:: Memory allocation
+   :level: 2
+
+   .. code-block:: bash
+
+      p = kmalloc(len, GFP_KERNEL);
+      if (!p)
+          return -ENOMEM;
+
+   * GFP_KERNEL, GFP_ATOMIC
+
+   .. code-block:: bash
+
+      kfree(p);
 
 In Linux only resident memory can be allocated, using kmalloc call. A typical kmalloc
 call is presented below:
@@ -237,6 +299,29 @@ list_head is defined in ``include/linux/list.h`` along with all the other
 functions that work on the lists. The following code shows the definition of
 the list_head list_head and the use of an element of this type in another
 well-known structure in the Linux kernel:
+
+.. slide:: Linked lists
+   :level: 2
+
+   .. code-block:: c
+   
+      struct list_head {
+          struct list_head *next, *prev;
+      };
+       
+      struct task_struct {
+          ...
+          struct list_head children;
+          ...
+      };
+
+   .. code-block:: c
+
+      INIT_LIST_HEAD(struct list_head *list)
+      list_add(struct list_head *new, struct list_head *head);
+      list_del(struct list_head *entry);
+      list_entry(ptr, type, member);
+      list_for_each(pos, head);
 
 .. code-block:: c
 
@@ -341,6 +426,27 @@ in the include/linux/list.h header.
 Spinlock
 --------
 
+.. slide:: spinlock
+   :level: 2
+
+   * useful when the code cannot sleep
+   * keep the critical region short
+
+   .. code-block:: c
+
+      DEFINE_SPINLOCK(lock1);
+      spinlock_t lock2;
+       
+      spin_lock_init(&lock2);
+       
+      spin_lock(&lock1);
+      /* critical region */
+      spin_unlock(&lock1);
+       
+      spin_lock(&lock2);
+      /* critical region */
+      spin_unlock(&lock2);
+
 spinlock_t (defined in ``linux/spinlock.h``) is the basic type that implements
 the spinlock concept in Linux. It describes a spinlock, and the operations
 associated with a spinlock are spin_lock_init, spin_lock, spin_unlock . An
@@ -409,6 +515,23 @@ An example of use:
 mutex
 -----
 
+.. slide:: mutex
+   :level: 2
+
+   .. code-block:: c
+      
+      #include <linux/mutex.h>
+
+      struct mutex mutex;
+      void mutex_init(struct mutex *mutex);
+      DEFINE_MUTEX(name);
+  
+      /* functions for mutex acquire */
+      void mutex_lock(struct mutex *mutex);
+  
+      /* functions for mutex release */
+      void mutex_unlock(struct mutex *mutex);
+
 A mutex is a variable of the ``struct mutex`` type (defined in linux/mutex.h ).
 Functions and macros for working with mutex are listed below:
 
@@ -416,14 +539,14 @@ Functions and macros for working with mutex are listed below:
 
   #include <linux/mutex.h>
    
-  /* functii pentru initializarea mutexului */
+  /* functions for mutex initialization */
   void mutex_init(struct mutex *mutex);
   DEFINE_MUTEX(name);
    
-  /* functii pentru achiziționarea mutexului */
+  /* functions for mutex acquire */
   void mutex_lock(struct mutex *mutex);
    
-  /* functie pentru eliberarea semaforului */
+  /* functions for mutex release */
   void mutex_unlock(struct mutex *mutex);
 
 Operations are similar to classic mutex operations in userspace or spinlock
@@ -433,6 +556,23 @@ used in process context.
 
 Atomic variables
 ----------------
+
+.. slide:: Atomic ops
+   :level: 2
+
+   .. code-block:: c
+
+      #include <asm/atomic.h>
+      
+      void atomic_set(atomic_t *v, int i);
+      int atomic_read(atomic_t *v);
+      void atomic_add(int i, atomic_t *v);
+      void atomic_sub(int i, atomic_t *v);
+      void atomic_inc(atomic_t *v);
+      void atomic_dec(atomic_t *v);
+      int atomic_inc_and_test(atomic_t *v);
+      int atomic_dec_and_test(atomic_t *v);
+      int atomic_cmpxchg(atomic_t *v, int old, int new);
 
 Often, you only need to synchronize access to a simple variable, such as a 
 counter. For this, an ``atomic_t`` can be used (defined in include/linux/atomic.h
