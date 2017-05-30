@@ -587,8 +587,7 @@ Exercises
 0. Intro
 --------
 
-Using `lxr <http://elixir.free-electrons.com/linux/latest/source>`_ find the definitions
-of the following symbols in the Linux kernel:
+Using |LXR|_ find the definitions of the following symbols in the Linux kernel:
 
    * :c:type:`struct list_head`
    * :c:type:`INIT_LIST_HEAD`
