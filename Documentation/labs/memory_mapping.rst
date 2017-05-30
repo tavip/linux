@@ -287,14 +287,14 @@ Further reading
 Exercises
 =========
 
-Mapping contiguous physical memory to userspace
-------------------------------------------------
+1. Mapping contiguous physical memory to userspace
+--------------------------------------------------
 
 Implement a device driver that maps contiguous physical memory
 (e.g. obtain via :c:func:`kmalloc`) to userspace.
 
 Review the `Device driver memory mapping`_ section, generate the
-skeleton for *memory_mapping/kmmap* and fill in areas marked with
+skeleton for the task named *kmmap** and fill in areas marked with
 **TODO 1**.
 
 Start with allocating a NPAGES+2 memory area page using kmalloc in the
@@ -335,14 +335,14 @@ For testing, use *test/mmap-test*. If everything goes well the test
 will show "matched" messages.
 
 
-Mapping non-contiguous physical memory to userspace
-----------------------------------------------------
+2. Mapping non-contiguous physical memory to userspace
+------------------------------------------------------
 
 Implement a device driver that maps non-contiguous physical memory
 (e.g. obtain via :c:func:`vmalloc`) to userspace.
 
 Review the `Device driver memory mapping`_ section, generate the
-skeleton for *memory_mapping/vmmap* and fill in areas marked with
+skeleton for the task named **vmmap** and fill in areas marked with
 **TODO 1**.
 
 Allocate a memory area of NPAGES with :c:func:`vmalloc`.
@@ -385,8 +385,8 @@ Implement the mmap driver function.
 For testing, use *test/mmap-test*. If everything goes well the test
 will show "matched" messages.
 
-Read / write operations in mapped memory
-----------------------------------------
+3. Read / write operations in mapped memory
+-------------------------------------------
 
 Modify one of the previous modules to allow read / write operations on
 your device. This is a didactic exercise to see that the same space
@@ -405,13 +405,13 @@ For testing run *test/mmap-test* with 2 as parameter:
    root@qemux86:~# skels/memory_mapping/kmmap/mmap-test 2
 
 
-Display memory mapped in procfs
--------------------------------
+4. Display memory mapped in procfs
+----------------------------------
 
 Using one of the previous modules, create a procfs file in which you
 display the total memory mapped by the calling process.
 
-Fill in the areas marked with TODO 3.
+Fill in the areas marked with **TODO 3**.
 
 Create a new entry in procfs (PROC_ENTRY_NAME, defined in mmap-test.h)
 that will show the total memory mapped by the process that called the
