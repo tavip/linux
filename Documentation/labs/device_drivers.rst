@@ -236,8 +236,8 @@ macro). In the private_data field of the file structure, information can be
 stored at open which is then available in the ``read``, ``write``, ``release``, etc.
 routines.
 
-Recording and registering of character devices
-----------------------------------------------
+Registration and unregistration of character devices
+----------------------------------------------------
 
 The registration/registration of a device is made by specifying the major and
 minor. The ``dev_t`` type is used to keep the identifiers of a device (both major
@@ -721,6 +721,11 @@ Exercises
     .. include:: exercises-summary.hrst
     .. |LAB_NAME| replace:: device_drivers
 
+As a first step, you will need to create the /dev/so2_cdev character
+/dev/so2_cdev using the mknod utility.
+
+.. attention:: Read the Major and Minor ID in the lab.
+
 0. Intro
 --------
 
@@ -738,83 +743,84 @@ of the following symbols in the Linux kernel:
 
 The driver will control a single device with the ``MY_MAJOR`` major and
 ``MY_MINOR`` minor (the macros defined in the kernel/so2_cdev.c file).
-As a first step, you will need to create the /dev/so2_cdev character
-/dev/so2_cdev using the mknod utility.
 
-.. attention:: Read the Major and Minor ID in the lab. To avoid using mknod every machine boot,
-   add the mknod command with the relevant parameters at the end of the qemu-vm/fsimg/etc/rcS .
+   1. Create **/dev/so2_cdev** character device node using **mknod**.
 
-Implement the registration and deregistration of the device with the name
-so2_cdev , respectively in the init and exit module functions. Remember
-that the driver controls a single device. In this exercise you do not need to
-use the cdev_init and cdev_add. You will use them in the next exercise.
+      .. hint:: Read `Majors and minors`_ section in the lab.
 
-.. attention:: Read the section  registering lab character devices in the lab.
+   2. Implement the registration and deregistration of the device with the name
+      ``so2_cdev``, respectively in the init and exit module functions. Implement **TODO 1**
 
-Display, using pr_info, a message after the recording and registration operations to confirm that they were successful. Then load the module into the kernel:
+      .. hint:: Read the section `Registration and unregistration of character devices`_
 
-.. code-block:: bash
+   3. Display, using ``pr_info``, a message after the registration and unregistration
+      operations to confirm that they were successful. Then load the module into the kernel:
 
- $ insmod so2_cdev.ko 
+      .. code-block:: bash
 
-And see character devices in ``/proc/devices``:
+         $ insmod so2_cdev.ko 
 
-.. code-block:: bash
+      And see character devices in ``/proc/devices``:
 
- $ cat /proc/devices | less
+      .. code-block:: bash
 
-Identify the device type recorded after major 42 . Note that device types (ie 
-major) and actual devices (i.e. minors) appear in /proc/devices.
+         $ cat /proc/devices | less
 
-.. note:: Entries to /dev are not created by inserting the module. These can be created 
-          in two ways: Manually, using the mknod command as we will do in the following exercises.
-          Automatically using udev daemon; We will not insist on this in SO2 laboratories 
+      Identify the device type registered with major 42 . Note that ``/proc/devices``
+      contains only the device types (major) but not the actual devices (i.e. minors).
 
-Unload the kernel module:
+      .. note:: Entries in /dev are not created by loading the module. These can be created
+          in two ways:
 
-.. code-block:: bash
+                * manually, using the ``mknod`` command as we will do in the following exercises.
+                * automatically using udev daemon
 
-  $ rmmod so2_cdev
+   4. Unload the kernel module
 
-Register an already assigned device
------------------------------------
+      .. code-block:: bash
 
-Modify the kernel module to try recording a previously assigned device. See LXR 
-to identify the error returned by module registration.
+         rmmod so2_cdev
 
-Return to the initial configuration of the module.
-
-See ``/proc/devices`` to get an already assigned device.
-
-Implementing device opening and closing
+2. Register an already registered major
 ---------------------------------------
 
-Run the ``cat`` command over the created character device (/dev/so2_cdev).
-Reading does not work because the driver does not have the file opening,
-reading, and closing functions implemented.
+Modify **MY_MAJOR** so that it points to an already used major number. 
+
+.. hint:: See ``/proc/devices`` to get an already assigned major.
+
+See `errno-bash.h <http://elixir.free-electrons.com/linux/v4.9/source/include/uapi/asm-generic/errno-base.h>`_
+and figure out what does the error code mean.
+Return to the initial configuration of the module.
+
+3. Open and close
+-----------------
+
+Run ``cat /dev_so2_cdev`` to read data from our char device.
+Reading does not work because the driver does not have the open function implemented.
+Follow comments marked with TODO 2 and implement them.
 
    1. Initialize your device
-      - Read the section Recording and registering lab character devices in the lab
-      - First, add a cdev struct field to your struct cdev.
+
+      * add a cdev struct field to so2_device_data structure.
+      * Read the section `Registration and unregistration of character devices`_ in the lab.
+
    2. Implement the open and release in the driver.
    3. Display a message in the open and release
-   4. Run the ``cat`` command on the device after inserting the module. Follow the 
-      messages displayed by the kernel after running the cat command. You receive the 
-      error message because the driver does not implement the reading function in the 
-      file. 
+   4. Read again ``/dev/so2_cdev`` file. Follow the messages displayed by the kernel. We still get an error
+      because ``read`` function is not yet implemented.
 
 .. note:: The prototype of a device driver's operations is in the file_operations 
-          structure. Go to the open and release section.
+          structure. Read `Open and release`_ section.
 
-Access restriction
-------------------
+4. Access restriction
+---------------------
 
 Restrict access to the device with atomic variables, so that a single process
 can open the device at a time. The rest will receive the "device busy" error
 ("-EBUSY"). Restricting access will be done in the open function displayed by 
-the driver.
+the driver. Follow comments marked with TODO 3 and implement them.
 
-   1. Add an atomic_t atomic_t to the device structure.
+   1. Add an atomic_t variable to the device structure.
    2. Initialize the variable at device initialization.
    3. Use the variable in the open function to restrict access to the device. We
       recommend using atomic_cmpxchg.
@@ -822,68 +828,64 @@ the driver.
    5. To test your deployment, you'll need to simulate a long-term use of your 
       device. Call the scheduler at the end of the device opening:
 
-.. code-block:: bash
+      .. code-block:: bash
 
-      set_current_state(TASK_INTERRUPTIBLE);
-      schedule_timeout(1000);
+         set_current_state(TASK_INTERRUPTIBLE);
+         schedule_timeout(1000);
 
-    6. Test using ``cat /dev/so2_cdev`` & ``cat /dev/so2_cdev``.
+   6. Test using ``cat /dev/so2_cdev`` & ``cat /dev/so2_cdev``.
 
-.. note:: Before testing, the device /dev/so2_cdev must be created.
 
 .. note:: The advantage of the atomic_cmpxchg function is that it can check the
           old value of the variable and set it up to a new value, all in one
-          atomic operation. More details about the function parameters can be found here .
-          An example of use is here .
+          atomic operation. Read more details about `atomic_cmpxchg <https://www.khronos.org/registry/OpenCL/sdk/1.1/docs/man/xhtml/atomic_cmpxchg.html>`_
+          An example of use is `here <http://elixir.free-electrons.com/linux/v4.9/source/lib/dump_stack.c#L24>`_.
 
-Read operation
+5. Read operation
 -----------------
 
-Implement the read function in the driver:
+Implement the read function in the driver. Follow comments marked with ``TODO 4`` and implement them.
 
-   1. Keep a buffer in your device structure to initialize to the message from
-      the MESSAGE macro. Initializing this buffer will be done with device
-      initialization.
+   1. Keep a buffer in ``so2_device_data`` structure initialized with the value of MESSAGE macro. 
+      Initializing this buffer will be done in module init function.
    2. At a read call, copy the contents of the kernel space buffer into the user
       space buffer.
-   3. Use the copy_to_user function to copy information from kernel space to 
-      user space.
-   4. Ignore the size and offset parameters at this time. You can assume that
-      the buffer in user space is large enough. You do not need to check the
-      validity of the size argument of the read function.
-   5. The value returned by the read call is the number of bytes transmitted 
-      from the kernel space buffer to the user space buffer.
-   6. After implementation, test using cat /dev/so2_cdev/
 
-.. note:: The cat /dev/so2_cdev of the cat /dev/so2_cdev does not end (use Ctrl+C ).
-          Read the read and write sections and Access to the address space of the lab 
-          process.
+      * Use the copy_to_user function to copy information from kernel space to 
+        user space.
+      * Ignore the size and offset parameters at this time. You can assume that
+        the buffer in user space is large enough. You do not need to check the
+        validity of the size argument of the read function.
+      * The value returned by the read call is the number of bytes transmitted 
+        from the kernel space buffer to the user space buffer.
+   3. After implementation, test using cat /dev/so2_cdev/
+
+.. note:: The command ``cat /dev/so2_cdev`` does not end (use Ctrl+C).
+          Read the `read and write`_ sections and `Access to the address space of the process`_
           If you want to display the offset value use a construction of the form:
-          ``pr_info("Offset: %lld \n", *offset)``; It's important that the %lld lld display modifier
-          is a display for a long long int data type. The data type loff_t (used by offset )
-          is a typedef for long long int.
+          ``pr_info("Offset: %lld \n", *offset)``; The data type loff_t (used by offset ) is a typedef for long long int.
 
 The command ``cat`` reads to the end of the file, and the end of the file is
-signaled by returning the value 0 in the read. Thus, for a correct deployment,
+signaled by returning the value 0 in the read. Thus, for a correct implementation,
 you will need to update and use the offset received as a parameter in the read
 function and return the value 0 when the user has reached the end of the buffer.
 
 Modify the driver so that the ``cat`` commands ends:
 
     1. Use the size parameter.
-    2. For every reading, update the offset parameter accordingly.
+    2. For every read, update the offset parameter accordingly.
     3. Ensure that the read function returns the number of bytes that were copied
        into the user buffer. 
 
-..note:: By dereferencing the offset parameter it is possible to read and move the current
-         position in the file. Its value needs to be updated every time a read is done 
-         successfully.
+.. note:: By dereferencing the offset parameter it is possible to read and move the current
+          position in the file. Its value needs to be updated every time a read is done 
+          successfully.
 
-Write operation
----------------
+6. Write operation
+------------------
 
-Add the ability to write a message to replace the predefined message. Implement 
-the write function in the driver.
+Add the ability to write a message into kernel buffer to replace the predefined message. Implement
+the write function in the driver. Follow comments marked with ``TODO 5``
 
 Ignore the offset parameter at a time. You can assume that the driver buffer is
 large enough. You do not need to check the validity of the write argument's 
@@ -893,68 +895,61 @@ size argument.
           structure.
           Test using commands:
 
-.. code-block:: bash
+          .. code-block:: bash
 
-   echo "arpeggio"> /dev/so2_cdev
-   cat /dev/so2_cdev
-         
-          Read the read and write sections and Access to the address space of the lab 
-          process.
+             echo "arpeggio"> /dev/so2_cdev
+             cat /dev/so2_cdev
 
-ioctl operation
----------------
+          Read the `read and write`_ sections and `Access to the address space of the process`_
+
+7. ioctl operation
+------------------
 
 For this exercise, we want to add the ioctl MY_IOCTL_PRINT to display the
-message from the IOCTL_MESSAGE macro in the driver.
+message from the IOCTL_MESSAGE macro in the driver. Follow the comments marked with ``TODO 6``
 
 For this:
 
    1. Implement the ioctl function in the driver.
-   2. You need to write a user-space program (user/so2_cdev_test.c) to call the
-      ioctl function with the appropriate parameters. In the test file you must call
-      ioctl for the device file.
-   3. Use printk to display the message in the driver. 
+   2. We need to use user/so2_cdev_test.c to call the
+      ioctl function with the appropriate parameters.
 
 .. note:: The macro definition MY_IOCTL_PRINT is defined in the include/so2_cdev.h file
-          in the include/so2_cdev.h task archive (uses _IOC to define the _IOC)
-          Read the ioctl and open and release sections in the lab.
+          Read the `ioctl`_ section in the lab.
 
-.. note:: To compile the user space source code use the gcc-5 . To do this, run the 
-          command: ``/usr/bin/gcc-5 -m32 -static -Wall -g -o so2_cdev_test so2_cdev_test.c``.
+.. note:: Because we need to compile the program for qemu machine which is 32 bit, if your host is 64 bit
+          then you need to install ``gcc-multilib`` package.
 
-The executable result should be copied to the virtual machine just like the 
-kernel module and run it on the virtual machine to validate the correct ioctl 
-implementation.
-
-Extra
------
-Ioctl with messaging Add two ioctl operations to modify the
-message associated with the driver. Use fixed-length buffer ( BUFFER_SIZE ).
-
-   1. Add the ioctl function from the driver operations:
-      * MY_IOCTL_SET_BUFFER for writing a message to the device;
-      * MY_IOCTL_GET_BUFFER to read a message from your device.
-   2. Change the user-space program to allow for testing.
-
-.. note:: Read the ioctl sections and Access to the address space of the lab process.
-
-Ioctl with waiting queues
--------------------------
-
-Add two ioctl to the device driver for queuing.
-
-    1. Add the ioctl function from the driver operations:
-       * MY_IOCTL_DOWN to add the process to a queue;
-       * MY_IOCTL_UP to remove the process from a queue. 
-    2. Fill the device structure with a wait_queue_head_t field and a 
-       wait_queue_head_t flag.
-    3. Do not forget to initialize the wait queue and flag.
-    4. Remove xclusive access condition from previous exercise
-    5. Change the user-space program to allow for testing. 
-
-When the process is added to the queue, it will remain blocked in execution; To
-run the queue command open a new console in the virtual machine with Alt+F2 ;
-You can return to the previous console with Alt+F1 . If you're connected via 
-SSH to the virtual machine, open a new console.
-
-.. note:: Read the ioctl and Synchronization sections - waiting queues in the lab.
+.. Extra
+   -----
+   
+   Ioctl with messaging Add two ioctl operations to modify the
+   message associated with the driver. Use fixed-length buffer ( BUFFER_SIZE ).
+   
+      1. Add the ioctl function from the driver operations:
+         * MY_IOCTL_SET_BUFFER for writing a message to the device;
+         * MY_IOCTL_GET_BUFFER to read a message from your device.
+      2. Change the user-space program to allow for testing.
+   
+   .. note:: Read the ioctl sections and Access to the address space of the lab process.
+   
+   Ioctl with waiting queues
+   -------------------------
+   
+   Add two ioctl to the device driver for queuing.
+   
+       1. Add the ioctl function from the driver operations:
+          * MY_IOCTL_DOWN to add the process to a queue;
+          * MY_IOCTL_UP to remove the process from a queue. 
+       2. Fill the device structure with a wait_queue_head_t field and a 
+          wait_queue_head_t flag.
+       3. Do not forget to initialize the wait queue and flag.
+       4. Remove xclusive access condition from previous exercise
+       5. Change the user-space program to allow for testing. 
+   
+   When the process is added to the queue, it will remain blocked in execution; To
+   run the queue command open a new console in the virtual machine with Alt+F2 ;
+   You can return to the previous console with Alt+F1 . If you're connected via 
+   SSH to the virtual machine, open a new console.
+   
+   .. note:: Read the ioctl and Synchronization sections - waiting queues in the lab.
