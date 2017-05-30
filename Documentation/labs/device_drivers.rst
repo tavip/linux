@@ -1,3 +1,4 @@
+========================
 Character device drivers
 ========================
 
@@ -5,15 +6,14 @@ Character device drivers
    :theme: single-level
 
 Laboratory objectives
----------------------
+=====================
 
-  * familiarity with concept of a character device
-  * understanding the various operations that can be performed on character
-    devices
-  * working with waiting queues 
+  * get in touch with the concept of character device driver
+  * understanding the various operations that can be performed on characterdevices
+  * working with waiting queues
 
 Overview
---------
+========
 
 In UNIX, hardware devices are accessed by the user through special device
 files . These files are grouped into the /dev directory, and system calls
@@ -44,8 +44,8 @@ subsystem . The role of these subsystems is to prepare the device driver's
 necessary resources (buffers), to keep the recently read data in the cache
 buffer, and to order the read and write operations for performance reasons.
 
-Major and minor identifier
---------------------------
+Majors and minors
+=================
 
 In UNIX, the devices traditionally had a unique, fixed identifier associated
 with them. This tradition is preserved in Linux, although identifiers can be
@@ -97,7 +97,7 @@ command used will be:
 Next, we'll refer drivers for character devices.
 
 Data structures for a character device
---------------------------------------
+======================================
 
 In the kernel, a character-type device is represented by :c:type:`struct cdev <cdev>`,
 a structure used to register it in the system. Most driver operations use three
@@ -128,8 +128,6 @@ described in the fields of the file_operations structure:
        int (*flush) (struct file *, fl_owner_t id);
        int (*release) (struct inode *, struct file *);
        [...]
-
-.. **
 
 It can be noticed that the signature of the function differs from the system 
 call that the user uses. The operating system sits between the user and
