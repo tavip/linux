@@ -1,5 +1,6 @@
 /*
- * SO2 Lab - Linux device drivers (#4)
+ * Character device drivers lab
+ *
  * All tasks
  */
 
@@ -33,11 +34,15 @@ MODULE_LICENSE("GPL");
 
 
 struct so2_device_data {
+	/* TODO 2/1: add cdev member */
 	struct cdev cdev;
+	/* TODO 4/2: add buffer with BUFSIZ elements */
 	char buffer[BUFSIZ];
 	size_t size;
+	/* TODO 6/2: extra members for home */
 	wait_queue_head_t wq;
 	int flag;
+	/* TODO 3/1: add atomic_t access variable to keep track if file is opened */
 	atomic_t access;
 };
 
@@ -45,15 +50,16 @@ struct so2_device_data devs[NUM_MINORS];
 
 static int so2_cdev_open(struct inode *inode, struct file *file)
 {
-	struct so2_device_data *data =
-		container_of(inode->i_cdev, struct so2_device_data, cdev);
+	struct so2_device_data *data;
+
+	/* TODO 3/1: inode->i_cdev contains our cdev struct, use container_of to obtain a pointer to so2_device_data */
+	data = container_of(inode->i_cdev, struct so2_device_data, cdev);
 
 	file->private_data = data;
 
-#ifndef EXTRA
-	if (atomic_cmpxchg(&data->access, 1, 0) != 1)
+	/* TODO 3/2: return immediately if access is != 0, use atomic_cmpxchg */
+	if (atomic_cmpxchg(&data->access, 0, 1) != 0)
 		return -EBUSY;
-#endif
 
 	set_current_state(TASK_INTERRUPTIBLE);
 	schedule_timeout(10);
@@ -67,6 +73,8 @@ so2_cdev_release(struct inode *inode, struct file *file)
 #ifndef EXTRA
 	struct so2_device_data *data =
 		(struct so2_device_data *) file->private_data;
+
+	/* TODO 3/1: reset access variable to 0, use atomic_set */
 	atomic_inc(&data->access);
 #endif
 	return 0;
@@ -82,6 +90,7 @@ so2_cdev_read(struct file *file,
 	size_t to_read;
 
 #ifdef EXTRA
+	/* TODO 6/6: extra tasks for home */
 	if (!data->size) {
 		if (file->f_flags & O_NONBLOCK)
 			return -EAGAIN;
@@ -90,6 +99,7 @@ so2_cdev_read(struct file *file,
 	}
 #endif
 
+	/* TODO 4/4: Copy data->buffer to user_buffer, use copy_to_user */
 	to_read = (size > data->size - *offset) ? (data->size - *offset) : size;
 	if (copy_to_user(user_buffer, data->buffer + *offset, to_read) != 0)
 		return -EFAULT;
@@ -106,12 +116,14 @@ so2_cdev_write(struct file *file,
 	struct so2_device_data *data =
 		(struct so2_device_data *) file->private_data;
 
-	size = (*offset + size > BUFSIZ) ? (BUFSIZ - *offset) : size;
 
+	/* TODO 5/5: copy user_buffer to data->buffer, use copy_from_user */
+	size = (*offset + size > BUFSIZ) ? (BUFSIZ - *offset) : size;
 	if (copy_from_user(data->buffer + *offset, user_buffer, size) != 0)
 		return -EFAULT;
 	*offset += size;
 	data->size = *offset;
+	/* TODO 6/3: extra tasks for home */
 #ifdef EXTRA
 	wake_up_interruptible(&data->wq);
 #endif
@@ -128,9 +140,11 @@ so2_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	int remains;
 
 	switch (cmd) {
+	/* TODO 5/3: if cmd = MY_IOCTL_PRINT, display IOCTL_MESSAGE */
 	case MY_IOCTL_PRINT:
 		printk(LOG_LEVEL "%s\n", IOCTL_MESSAGE);
 		break;
+	/* TODO 6/19: extra tasks, for home */
 	case MY_IOCTL_DOWN:
 		data->flag = 0;
 		ret = wait_event_interruptible(data->wq, data->flag != 0);
@@ -159,6 +173,7 @@ so2_cdev_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static const struct file_operations so2_fops = {
 	.owner = THIS_MODULE,
+/* TODO 2/4: add open, release, read, write functions */
 	.open = so2_cdev_open,
 	.release = so2_cdev_release,
 	.read = so2_cdev_read,
@@ -171,24 +186,30 @@ static int so2_cdev_init(void)
 	int err;
 	int i;
 
+        /* TODO 1/6: register char device region for MY_MAJOR and NUM_MINORS starting at MY_MINOR */
 	err = register_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR),
 			NUM_MINORS, MODULE_NAME);
 	if (err != 0) {
-		printk(KERN_ERR "register_chrdev_region");
+		pr_info("register_chrdev_region");
 		return err;
 	}
 
 	for (i = 0; i < NUM_MINORS; i++) {
 #ifdef EXTRA
+		/* TODO 6/2: extra tasks, for home */
 		devs[i].size = 0;
 		memset(devs[i].buffer, 0, sizeof(devs[i].buffer));
 #else
-		devs[i].size = sizeof(MESSAGE);
+		/*TODO 4/2: initialize buffer with MESSAGE string */
 		memcpy(devs[i].buffer, MESSAGE, sizeof(MESSAGE));
+		devs[i].size = sizeof(MESSAGE);
 #endif
+		/* TODO 6/2: extra tasks for home */
 		init_waitqueue_head(&devs[i].wq);
 		devs[i].flag = 0;
-		atomic_set(&devs[i].access, 1);
+		/* TODO 3/1: set access variable to 0, use atomic_set */
+		atomic_set(&devs[i].access, 0);
+		/* TODO 2/2: init and add cdev to kernel core */
 		cdev_init(&devs[i].cdev, &so2_fops);
 		cdev_add(&devs[i].cdev, MKDEV(MY_MAJOR, i), 1);
 	}
@@ -200,9 +221,12 @@ static void so2_cdev_exit(void)
 {
 	int i;
 
-	for (i = 0; i < NUM_MINORS; i++)
+	for (i = 0; i < NUM_MINORS; i++) {
+		/* TODO 2/1: delete cdev from kernel core */
 		cdev_del(&devs[i].cdev);
+	}
 
+	/* TODO 1/1: unregister char device region, for MY_MAJOR and NUM_MINORS starting at MY_MINOR */
 	unregister_chrdev_region(MKDEV(MY_MAJOR, MY_MINOR), NUM_MINORS);
 }
 
