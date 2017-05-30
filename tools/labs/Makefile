@@ -21,7 +21,7 @@ build: $(KCONFIG) skels/Kbuild
 
 TEMPDIR := $(shell mktemp -u)
 
-copy:
+copy: $(YOCTO_IMAGE)
 	if  [ -e qemu.mon ]; then exit 1; fi
 	mkdir $(TEMPDIR)
 	sudo mount -t ext4 -o loop $(YOCTO_IMAGE) $(TEMPDIR)
