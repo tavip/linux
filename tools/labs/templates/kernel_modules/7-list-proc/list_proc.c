@@ -1,8 +1,8 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
-/* TODO/1: add missing headers */
-#include <linux/sched/signal.h>
+/* TODO: add missing headers */
+#include <linux/sched.h>
 
 MODULE_DESCRIPTION("List current processes");
 MODULE_AUTHOR("Kernel Hacker");

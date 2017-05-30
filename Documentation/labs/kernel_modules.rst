@@ -47,18 +47,17 @@ message will be generated.
      
     static int dummy_init(void)
     {
-            printk(KERN_DEBUG "Hi\n");
+            pr_debug("Hi\n");
             return 0;
     }
      
     static void dummy_exit(void)
     {
-            printk(KERN_DEBUG "Bye\n");
+            pr_debug("Bye\n");
     }
      
     module_init(dummy_init);
     module_exit(dummy_exit);
-
 
 
 The generated messages will not be displayed on the console but will be saved
@@ -83,7 +82,7 @@ Compiling a kernel module differs from compiling an user program. First, other
 headers should be used. Also, the module should not be linked to libraries.
 And, last but not least, the module must be compiled with the same options as
 the kernel in which we load the module. For these reasons, there is a standard
-compilation method (kbuild). This method requires the use of two  files:
+compilation method (kbuild). This method requires the use of two files:
 a Makefile and a Kbuild file.
 
 Below is an example of a Makefile:
@@ -801,6 +800,12 @@ be added, removed, or set with operators +, - or = :
 Exercises
 =========
 
+.. important::
+
+   .. include:: exercises-summary.hrst
+   
+   .. |LAB_NAME| replace:: kernel_modules
+   
 
 0. Intro
 --------
@@ -817,39 +822,21 @@ Find the definitions of the following symbols in the Linux kernel:
 1. Module
 ---------
 
-While working with the kernel modules, we will do the following steps, as described
-below:
-
-* we will compile the kernel module. That is, we will run, in the directory
-  where the sources and Makefile/Kbuild files are located, the command: ``make``
-* we will copy the module to the directory from which the virtual machine
-  filesystem will be generated. That is, we will use the command:
-
-  - cp <module-name>.ko ~/so2/qemu-so2/fsimg/root/modules/
-* we will start the virtual machine. That is, we will run from the director of
-  the virtual machine the following command:
-
-  - ``make``
-
-Perform the above steps for the module in the 1-2-test-mod/ directory.
-
-.. note:: Read `Compiling kernel modules`_ section. 
-
-Then follow the usual steps in using a kernel module:
+Generate the skeleton for the task named **1-2-test** then build and
+copy the module to the VM. Perform the following tasks:
 
 * load the kernel module.
-* list the kernel modules and check if current module is present.
-* unload the kernel module.
+  
+* list the kernel modules and check if current module is present
+    
+* unload the kernel module
+    
 * view the messages displayed at loading/unloading the kernel module using
-  ``dmesg`` command.
+  ``dmesg`` command
 
 .. note:: Read `Loading/unloading a kernel module`_ section. When unloading
           a kernel module, only the module name (without extension) can
           be specified.
-
-It is advisable to clean up the working directory. For this reason, run 
-``make clean`` command in the directory ``1-2-test-mod\`` where you
-compiled the kernel module source.
 
 2. Printk
 ---------
@@ -858,107 +845,118 @@ Watch the virtual machine console. Why were the messages not displayed directly
 to the virtual machine console?
 
 Inspect the source code file. Change the source code file so that messages are
-displayed directly on the console.
+displayed directly on the serial console.
 
-.. note:: Read the `Printk debugging`_ section of the lab and follow the
-          instructions for using the printk function. One solution would be
-          to edit the boot options in the ``qemu-so2/Makefile``, and add the 
-          ``ignore_loglevel`` boot option to the line starting with ``append root``.
+.. hint:: Read the `Printk debugging`_ section of the lab and change
+          the log level of the prints.
 
-Compile the module. Load and then unload the module from the kernel.
-Messages are now displayed on the virtual machine console. 
+.. hint:: An alternative approach is to edit the boot options in
+          ``tools/labs/qemu/Makefile``. Add ``ignore_loglevel`` option
+	  to the qemu ``--append`` option.
 
-.. note:: You can also open qemu pseudo terminal. Use ``minicom -D /dev/pts19``
-          for char device redirected to /dev/pts/19 (label virtiocon0).
+.. hint:: Another option is to set the current log level by writting
+          the desired log level to ``/proc/sys/kernel/printk``
 
 3. Error
 --------
 
-Go to the ``3-error-mod/ directory``. Compile the sources and get the corresponding
-kernel module. Why have compilation errors occurred? 
+Generate the skeleton for the task named **1-2-test**. Compile the
+sources and get the corresponding kernel module. Why have compilation
+errors occurred?
 
 .. hint:: How does this module differ from the previous module?
 
-Modify the module to solve the cause of those errors. Compile, load and unload the module.
+Modify the module to solve the cause of those errors.
 
 4. Sub-modules
 --------------
 
-Go to the ``4-multi-mod/`` directory. Inspect the C source files: ``mod1.c`` and ``mod2.c``.
-Module 2 contains only the definition of a function used by module 1.
+Generate the skeleton for the task named **4-multi-mod**. Inspect the
+C source files: ``mod1.c`` and ``mod2.c``. Module 2 contains only the
+definition of a function used by module 1.
 
-Create a Kbuild file that will lead to creating the ``multi_mod.ko`` from the two source files.
+Create a Kbuild file that will lead to creating the ``multi_mod.ko``
+from the two source files.
 
 .. hint:: Read the `Compiling kernel modules`_ section of the lab.
 
-Compile, load and unload the kernel module. Messages are displayed properly on the console.
+Compile, copy, load and unload the kernel module. Make sure messages
+are properly displayed on the console.
 
 5. Kernel oops
 --------------
 
-Go to the ``5-oops-mod/`` directory and inspect the C source file. Notice where the 
-problem will occur. Add -g to compilation in the Kbuild file.
+Generate the skeleton for the task named *5-oops-mod** and inspect the
+C source file. Notice where the problem will occur. Add -g to
+compilation in the Kbuild file.
 
 .. hint:: Read `Compiling kernel modules`_  section of the lab.
 
 Compile the associated module and load it into the kernel. Identify the memory
 address at which the oops appeared.
 
-.. hint:: Read `Debugging`_ section of the lab.
-          To identify the address, follow the oops message and extract the value of the
-          instructions pointer (EIP) register.
+.. hint:: Read `Debugging`_ section of the lab.  To identify the
+          address, follow the oops message and extract the value of
+          the instructions pointer (EIP) register.
 
 Determine which instruction has triggered the oops.
 
-.. hint:: Use the /proc/modules information to get the load address of the kernel module.
-          Use, on the physical machine, objdump and/or addr2line . Objdump needs
-          debugging support for compilation!
-          Read the lab's `objdump`_ and `addr2line`_ sections.
+.. hint:: Use the /proc/modules information to get the load address of
+          the kernel module.  Use, on the physical machine, objdump
+          and/or addr2line . Objdump needs debugging support for
+          compilation!  Read the lab's `objdump`_ and `addr2line`_
+          sections.
 
-Unload the kernel module. Notice that the operation does not work because there
-are references from the kernel module within the kernel since the oops; Until 
-the release of those references (which is almost impossible in the case of an 
-oops), the module can not be unloaded.
+Try to unload the kernel module. Notice that the operation does not
+work because there are references from the kernel module within the
+kernel since the oops; Until the release of those references (which is
+almost impossible in the case of an oops), the module can not be
+unloaded.
 
 6. Module parameters
 --------------------
 
-Go to the 6-cmd-mod/ directory and inspect the C ``cmd_mod.c`` source file. Compile
-the associated module and load the kernel module to see the printk message. 
-Then unload the module from the kernel.
+Generate the skeletons for **6-cmd-mod** and inspect the C
+``cmd_mod.c`` source file. Compile and copy the associated module and
+load the kernel module to see the printk message. Then unload the
+module from the kernel.
 
-Without modifying the sources, load the kernel module so that the message shown
-is ``Early bird gets tired``.
+Without modifying the sources, load the kernel module so that the
+message shown is ``Early bird gets tired``.
 
-.. hint:: The str variable can be changed as a parameter passed to the module. Find more information
-          `here <http://tldp.org/LDP/lkmpg/2.6/html/x323.html>`_.
+.. hint:: The str variable can be changed by passing a parameter to
+          the module. Find more information `here
+          <http://tldp.org/LDP/lkmpg/2.6/html/x323.html>`_.
 
 7. Proc info
 ------------
 
-Go to the 7-list-proc/ directory. Create a module to display information about
-the current process. Module name must be ``list_proc.ko``.
+Generate the skeleton for the task named **7-list-proc**. Add code to
+display the Process ID (``PID``) and the executable name. The
+information will be displayed both when loading and unloading the
+module.
 
-Display the Process ID (``PID``) and the executable name. The information
-will be displayed both when loading and unloading the module.
+.. note::
+          * In the Linux kernel, a process is described by the
+          :c:type:`struct task_struct`.  Use |LXR|_ to find the
+          definition of ``struct task_struct``.
+	  
+          * To find the structure field that contains the name of the
+	    executable, look for the "executable" comment.
 
-.. hint:: Do not start from scratch.
+          * The pointer to the structure of the current process
+	    running at a given time in the kernel is given by the
+	    :c:macro:`current` variable (of the type ``struct task_struct
+	    *``).
 
-          * Copy the Makefile and Kbuild and source C files from 
-            one of the previous directories and modify them accordingly.
-          * In the Linux kernel, a process is described by the :c:type:`task_struct`.
-            Use  `LXR <http://elixir.free-electrons.com/linux/latest/source>`_ or ``cscope`` to
-            find the contents of ``struct task_struct``.
-          * To find the structure field that contains the name of the executable, look for
-            the ``executable`` string.
-          * The pointer to the structure of the current process running at a given time in the
-            kernel is given by the ``current`` variable (of the type ``struct task_struct *``).
-          * To use the ``current`` variable, you'll need to include the header in which the
-            ``struct task_struct`` is defined, i.e ``linux/sched.h``.
+.. hint:: To use c:macro:`current` you'll need to include the header
+          in which the ``struct task_struct`` is defined, i.e
+          ``linux/sched.h``.
 
-Compile and load the obtained module. Unload the kernel mode.
+Compile copy and load the module. Unload the kernel module.
 
-Then repeat the loading/unloading operation. Note that the PIDs of the 
-displayed processes differ. This is because a module is being loaded from the 
-executable ``/sbin/insmod`` when the module is loaded and when the module is 
-unloaded a process is created from the executable ``/sbin/rmmod``.
+Repeat the loading/unloading operation. Note that the PIDs of the
+displayed processes differ. This is because a module is being loaded
+from the executable ``/sbin/insmod`` when the module is loaded and
+when the module is unloaded a process is created from the executable
+``/sbin/rmmod``.
