@@ -201,7 +201,7 @@ macro is defined or if dynamic debugging is used.
 Memory allocation
 -----------------
 
-In Linux, only resident memory can be allocated via the call. A typical kmalloc 
+In Linux only resident memory can be allocated, using kmalloc call. A typical kmalloc
 call is presented below:
 
 .. code-block:: c
@@ -213,12 +213,12 @@ call is presented below:
        //report error: -ENOMEM;
    }
    
-As you can see, the first parameter indicates the byte size of the allocated 
+As you can see, the first parameter indicates the size in bytes of the allocated
 area. The function returns a pointer to a memory area that can be directly used
 in the kernel, or NULL if memory could not be allocated. The second parameter 
-specifies how allocation is desired and the most commonly used values are:
+specifies how allocation should be done and the most commonly used values are:
 
-   * ``GFP_KERNEL`` - using this value may cause the current process to be 
+   * ``GFP_KERNEL`` - using this value may cause the current process to be
      suspended. Thus, can not be used in the interrupt context.
    * ``GFP_ATOMIC`` - when using this value it ensures that the kmalloc function
      does not suspend the current process. Can be used anytime.
@@ -254,8 +254,8 @@ The usual routines for working with lists are as follows:
 
    * ``LIST_HEAD(name)`` is used to declare the sentinel of a list
    * ``INIT_LIST_HEAD(struct list_head *list)`` is used to initialize the sentinel
-of a list when dynamic allocation is made by setting the value of the next and
-prev to list fields.
+     of a list when dynamic allocation is made by setting the value of the next and
+     prev to list fields.
    * ``list_add(struct list_head *new, struct list_head *head)`` adds the new
      element after the head element.
    * ``list_del(struct list_head *entry)`` deletes the item at the entry address of
@@ -347,6 +347,7 @@ associated with a spinlock are spin_lock_init, spin_lock, spin_unlock . An
 example of use is given below:
 
 .. code-block:: c
+
   #include <linux/spinlock.h>
    
   DEFINE_SPINLOCK(lock1);
@@ -549,7 +550,7 @@ updates. For example, the code below:
    }
 
 Atomic bitwise operations
----------------------
+-------------------------
 
 The kernel provides a set of functions (in ``asm/bitops.h``) that modify or test
 bits in an atomic way.
@@ -571,191 +572,198 @@ tested and the nr is the bit on which the operation is performed.
 Exercises
 =========
 
+.. important:: The skeleton code is generated from full source examples
+   located in ``tools/labs/templates``. To solve the tasks start by
+   generating the skeleton code, running the skels target in ``tools/labs``.
+
+   .. code-block:: bash
+
+     tools/labs $ make clean
+     tools/labs$ LABS=kernel_api make skels
+
+   All paths below are relative to skeleton base directory ``tools/labs/skels/kernel_api``.
+
+
 0. Intro
 --------
 
-Identify, using cscope or LXR , the definitions of the following symbols:
+Using `lxr <http://elixir.free-electrons.com/linux/latest/source>`_ find the definitions
+of the following symbols in the Linux kernel:
 
-   * ``struct list_head``;
-   * macro ``INIT_LIST_HEAD``;
-   * function ``list_add``;
-   * macro ``list_for_each``;
-   * macros ``list_entry``, ``container_of`` and ``offsetof``. For ``offsetof``,
-     find the   generic, compiler-independent version. 
+   * :c:type:`struct list_head`
+   * :c:type:`INIT_LIST_HEAD`
+   * :c:func:`list_add`
+   * :c:func:`list_for_each`
+   * :c:func:`list_entry`
+   * :c:func:`container_of`
+   * :c:func:`offsetof`
 
-1. Allocation of memory to Linux
---------------------------------
+1. Memory allocation in Linux kernel
+------------------------------------
 
 Go to the ``1-mem/`` directory and browse the contents of the ``mem.c`` file.
 Observe the use of kmalloc call for memory allocation.
 
-    1. Compile the source code into a kernel module using the make command.
-    2. Load the kernel module using the ``insmod mem.ko`` command.
-    3. View the kernel messages using the ``dmesg`` command.
-    4. Unload the kernel module using the rmmod mem command.
+   1. Compile the source code and load the ``mem.ko`` module using ``insmod``.
+   2. View the kernel messages using the ``dmesg`` command.
+   3. Unload the kernel module using the ``rmmod mem`` command.
 
-.. note:: Review the Memory Allocation section in the lab.
+.. note:: Review the `Memory Allocation`_ section in the lab.
 
-2. Use of blocking operations in atomic context
------------------------------------------------
+2. Sleeping in atomic context
+-----------------------------
 
-Enter the 2-sched-spin/ directory and browse the contents of the sched-spin.c.
-.. hint:: The schedule_timeout function, corroborated with the set_current_state 
-          macro, forces the current process to wait 5 seconds.
+Go to ``2-sched-spin/`` directory and browse the contents of ``sched-spin.c`` file.
 
-   1. Compile the source code into a kernel module using the make command.
-   2. Load the module into the kernel using the insmod sched-spin.ko .
-   3. Notice that it is waiting for 5 seconds until the insertion order iscomplete. 
-   4. Unload the kernel mode.
-   5. Uncomment lines containing operations with spinlocks. Re-compile the source
+   1. Compile the source code and load the module.
+   2. Notice that it is waiting for 5 seconds until the insertion order is complete.
+   3. Unload the kernel mode.
+   4. Look for the lines marked with TODO0 to create an atomic section. Re-compile the source
       code and reload the module into the kernel.
 
-You have got an error. Look at the stack trace. What is the cause of the error?
+You should now get an error. Look at the stack trace. What is the cause of the error?
 
-.. hint:: In the error message, follow the line containing the BUG for a 
-          description of the error. You are not allowed to perform blocking operations in 
-          an atomic context. The atomic context is given by a section between a lock 
-          operation and a lock on a spinlock.
+.. hint:: In the error message, follow the line containing the BUG for a
+          description of the error. You are not allowed to sleep in atomic context.
+          The atomic context is given by a section between a lock operation and an
+          unlock on a spinlock.
 
-.. note:: Review the Label Execution, Locking , and Spinlock sections.
+.. note:: The schedule_timeout function, corroborated with the set_current_state
+          macro, forces the current process to wait S seconds.
 
-3. Assigning and working with kernel memory
--------------------------------------------
+.. note:: Review the `Contexts of execution`_, `Locking` and `Spinlock`_ sections.
 
-Enter the 3-memory/ directory and browse the contents of the ``memory.c``.
+3. Working with kernel memory
+-----------------------------
+
+Go to ``3-memory/`` directory and browse the contents of the ``memory.c`` file.
 Notice the comments marked with TODO. You must allocate 4 structures of type
-struct task_info and initialize them (in ``memory_init``), then print and
-free them (in memory_exit ).
+``struct task_info`` and initialize them (in ``memory_init``), then print and
+free them (in ``memory_exit``).
 
-   1. (TODO 1) The structures will contain:
-      * The PID of the current process, given by the ``current`` macro, of the
-        ``struct task_struct*`` type/
-      * Hint : Look for the relevant PID field in the task_struct structure.
-      * ``PID`` of the parent process of the current process.
-      * Hints: Look for the relevant field in the task_struct structure. Look for the
-        "parent" string. 
-      * ``PID`` of the next process from the process list.
-      * Hints: Use the next_task macro. The macro returns the pointer to the next
-        process of``struct task_struct *`` type.
-      * PID of the next process after the next.
-      * Hint : Use the next_task macro twice.
-   2. (TODO 2) Assign the structure struct task_info and initialize its fields:
+   1. (TODO 1) Allocate memory for task_info structure and initialize its fields:
+
       * The pid field to the PID transmitted as a parameter;
-      * The timestamp field at the value of the jiffies jiffies , which
-        maintains system activity time.
+      * The timestamp field to the value of the jiffies variable, which hold the
+        number of ticks that have occurred since the system booted.
+
+   2. (TODO 2) Allocate task_info for current process, parent process, next process,
+      the next process of the next process.
+
    3. (TODO 3) Display the four structures.
-      * Use printk to display their two fields: pid and timestamp.
+
+      * Use pr_info to display their two fields: pid and timestamp.
+
    4. (TODO 4) Release the space occupied by structures (use kfree).
 
-.. info::  The task_struct struct contains two fields to designate the parent of a 
+.. hint::
+          * You can access the current process using ``current`` macro.
+          * Look for the relevant fields in the task_struct structure (pid, parent).
+          * Use the next_task macro. The macro returns the pointer to the next
+            process of ``struct task_struct *`` type.
+
+.. note::  The task_struct struct contains two fields to designate the parent of a
            task:
+
            * ``real_parent`` points to the process that created the task or to
-             process 1 (init) if the parent completed their execution.
-           * ``parent`` indicates to the current task parent (the process that will be 
-             reported if the task completes execution).
+              process with pid 1 (init) if the parent completed its execution.
+           * ``parent`` indicates to the current task parent (the process that will be
+              reported if the task completes execution).
 
            In general, the values of the two fields are the same, but there are
            situations where they differ, for example when using the ptrace system call.
 
-.. hint:: Review the Label Assignment section in the lab.
+.. hint:: Review the `Memory allocation`_ section in the lab.
 
 
 4. Working with kernel lists
 ----------------------------
 
-Go to the 4-list/ directory. Browse the contents of the list.c file and
-notice comments marked with TODO. The current process will add the four
-structures listed above to a list. The list will be built in the list_init
-function and the task_info_add_for_current function. The list will be list_exit
-and deleted in the list_exit function and the task_info_purge_list function.
+Go to ``4-list/`` directory. Browse the contents of the ``list.c`` file and notice the comments
+marked with TODO. The current process will add the four structures from the previous exercise
+into a list. The list will be built in the ``task_info_add_for_current``
+function which is called when module is loaded. The list will printed and deleted
+in the ``list_exit`` function and the ``task_info_purge_list`` function.
 
-   1. (TODO 0) Copy the functions and sections shown from the previous exercise
-      (3-memory/).
-   2. (TODO 1) Complete the task_info_add_to_list function to assign a task
-      struct task_info to struct task_info and add it to the list.
-   3. (TODO 2) Complete the task_info_purge_list function to delete all the
-      items in the list.
-   4. Compile the kernel module. Load and unload the module by following the
-      messages displayed by the kernel. 
+   1. (TODO 1) Complete the task_info_add_to_list function to allocate a ``task_info`` struct
+      and add it to the list.
 
-.. hint::  Review the Labs list section.
-         When you delete items from the list, you will need to use the 
-         list_for_each_safe call. You can also use the list_for_each_entry_safe call.
+   2. (TODO 2) Complete the task_info_purge_list function to delete all the
+      elements in the list.
 
-5. Working with kernel lists for process processing
----------------------------------------------------
+   3. Compile the kernel module. Load and unload the module by following the
+      messages displayed by the kernel.
 
-Go to the 5-list-full/ directory. Browse the contents of the list-full.c and
-notice comments marked with TODO. In addition to the 4-list functionality we 
+.. hint::  Review the labs `Lists`_ section.
+           When deleting items from the list, you will need to use the 
+           :c:func:`list_for_each_safe` or :c:func:`list_for_each_entry_safe` calls.
+
+5. Working with kernel lists for process handling
+-------------------------------------------------
+
+Go to the ``5-list-full/`` directory. Browse the contents of the ``list-full.c`` and
+notice comments marked with TODO. In addition to the ``4-list`` functionality we
 add the following:
 
-   * A count field showing how many times a process has been "added".
+   * A count field showing how many times a process has been "added" to the list.
    * If a process is "added" several times, no new entry is created in the 
      list, but:
-            * Updating the timestamp field.
-            * Increment count.
-   * To implement the counter facility, add a task_info_find_pid function that
+
+      * Update the timestamp field.
+      * Increment count.
+
+   * To implement the counter facility, add a ``task_info_find_pid`` function that
      searches for a pid in the existing list.
-   * If found, the reference to the task_info task_info . If not, NULL 
-     returns. 
-   * An expiration facility. If a process is not "added" for 3 seconds and if it does
-     not have a counter greater than 5 then it is considered removed and is removed from the 
+
+      * If found, return the reference to the task_info struct. If not, return NULL
+
+   * An expiration facility. If a process was added more than 3 seconds ago and if it does
+     not have a count greater than 5 then it is considered expired and is removed from the
      list.
-   * The expiration facility is already implemented in the task_info_remove_expired function. 
+   * The expiration facility is already implemented in the ``task_info_remove_expired`` function.
 
-   1. (TODO 0) Copy from 3-memory and / or 4-list code sections where they are 
-      indicated.
-   2. (TODO 1) Implement the task_info_find_pid function as task_info_find_pid 
-above and in the function comment.
+   1. (TODO 1) Implement the task_info_find_pid function.
    3. (TODO 2) Change a field of an item in the list so it does not expire.
-     Hint : You must not satisfy part of the expiration condition of the
-     task_info_remove_expired function.
-   4. Compile, load and unload the module by following the displayed 
-      messages. Module load will take place because there is a "sleep" through the 
-      schedule_timeout function. 
 
-.. hint:: For TODO 2, extract the first element from the list (the one head.next by 
-          head.next ) and put the number field of the corresponding ti type structure on 
-          a sufficiently large value ( 10 ) using the atomic_set function.
+.. hint:: For TODO 2, extract the first element from the list (the one referred by head.next)
+          and set the count field to a large enough value. Use ``atomic_set``.
 
 6. Synchronizing list work
 --------------------------
 
 Go to the 6-list-sync/ directory.
 
-   1. Copy the 5-list-full/list-full.c (previous resolving) to 6-list-sync/list-sync.c.
-   2. Use a spinlock or a read-write lock to synchronize access to the list you use.
+   1. Browse the code and look for ``TODO`` string.
+   2. Use a spinlock or a read-write lock to synchronize access to the list.
    3. Compile, load and unload the kernel module.
 
-.. info:: Go to the Spinlock section of the lab.
+.. important:: Always lock data, not code!
 
-7. Test how to work with lists
-------------------------------
+.. note:: Read `Spinlock`_ section of the lab.
 
-Go to the 7-list-test/ directory and browse the contents of the list-test.c
-file. We'll use a test module. It will call functions exported by the
-6-list-sync/ . The exported functions are those described externally within the 
-list-test.c file.
+7. Test module calling in our list module
+-----------------------------------------
+
+Go to the 7-list-test/ directory and browse the contents of the ``list-test.c``
+file. We'll use it as a test module. It will call functions exported by the
+``6-list-sync/``. The exported functions are the ones marked with **extern** in
+``list-test.c`` file.
 
 To export the above functions from the 6-list-sync/ module, the following steps 
 are required:
 
     1. Functions must not be static.
     2. Use the EXPORT_SYMBOL macro to export the kernel symbols. For example:
-      ``EXPORT_SYMBOL(task_info_remove_expired)``; . The macro must be used for
+       ``EXPORT_SYMBOL(task_info_remove_expired)``; . The macro must be used for
        each function after the function is defined.
-    3. Report the test module about the presence of exported functions. After 
-       compiling the 6-list-sync/Module.symvers module, analyze the 
-       6-list-sync/Module.symvers , then copy it to the 7-list-test/.
-    4. Remove from the 6-list-sync/ sequence module by avoiding the expiration of
-       a list item (beats the test head).
-    5. Compile and load the module from 6-list-sync/ . Once loaded, it exposes 
+    3. Remove from the 6-list-sync/ that avoid the expiration of a list item.
+    4. Compile and load the module from 6-list-sync/ . Once loaded, it exposes 
        exported functions and can be used by the test module. You can check this by 
        searching for the function names in /proc/kallsyms before and after loading the 
        module.
-    6. Compile the test module and then load it.
-    7. Use lsmod to check that the two modules have loaded. What do you notice?
-    8. Unload the kernel test module.
+    5. Compile the test module and then load it.
+    6. Use lsmod to check that the two modules have loaded. What do you notice?
+    7. Unload the kernel test module.
 
 Which should be the unload order of the two modules (6-list-sync/ and test)? 
 What if you use another order?
