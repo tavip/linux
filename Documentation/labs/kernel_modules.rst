@@ -938,8 +938,8 @@ module.
 
 .. note::
           * In the Linux kernel, a process is described by the
-          :c:type:`struct task_struct`.  Use |LXR|_ to find the
-          definition of ``struct task_struct``.
+	    :c:type:`struct task_struct`.  Use |LXR|_ to find the
+	    definition of ``struct task_struct``.
 	  
           * To find the structure field that contains the name of the
 	    executable, look for the "executable" comment.
