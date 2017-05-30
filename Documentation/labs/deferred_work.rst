@@ -721,23 +721,23 @@ Further reading
 Exercises
 =========
 
-Intro
------
+0. Intro
+--------
 
-Find the definitions of the following symbols:
+Using |LXR|_, find the definitions of the following symbols:
 
-* Definition of jiffies
+* :c:macro:`jiffies`
 * :c:type:`struct timer_list`
 * :c:func:`spin_lock_bh function`
 
 
-Timer
------
+1.Timer
+-------
 
 We're looking at creating a simple kernel module that displays a
 message at *TIMER_TIMEOUT* seconds after the module's kernel load.
 
-Generate the skeleton for *deferred_work/1-2-timer* and follow the
+Generate the skeleton for the task named **1-2-timer** and follow the
 sections marked with **TODO 1** to complete the task.
 
 .. hint:: Use `pr_info(...)`. Messages will be displayed on the
@@ -751,22 +751,22 @@ sections marked with **TODO 1** to complete the task.
 	  For more information review the `Timers`_ section.
 
 
-Periodic timer
---------------
+2. Periodic timer
+-----------------
 
 Modify the previous module to display the message in once every
 TIMER_TIMEOUT seconds. Follow the section marked with **TODO 2** in the
 skeleton.
 
-Timer control using ioctl
--------------------------
+3. Timer control using ioctl
+----------------------------
 
 We plan to display information about the current process after N
 seconds of receiving a ioctl call from user space. N is transmitted as
 ioctl paramereter.
 
-Generate the skeleton for *3-4-5-deferred/kernel/* and follow the
-sections marked with **TODO 1** in the skeleton driver.
+Generate the skeleton for the task named **3-4-5-deferred** and
+follow the sections marked with **TODO 1** in the skeleton driver.
 
 You will need to implement the following ioctl operations.
 
@@ -821,8 +821,8 @@ running when there is nothing else to run on. Because the virtual
 machine is very light and does not do much it is natural to see this
 process most of the time.
 
-Blocking operations
--------------------
+4. Blocking operations
+----------------------
 
 Next we want to see what happens when we perform blocking operations
 in a timer routine. For this we try to call in the timer-handling
@@ -845,8 +845,8 @@ test program again to call :c:func:`alloc_io()`.
 	  called in the atomic context (the timer handler runs
 	  interrupt context).
 
-Workqueues
-----------
+5. Workqueues
+-------------
 
 We will modify the module to prevent the error observed in the
 previous task.
@@ -862,14 +862,14 @@ section if needed.
 	  the work after N seconds from the timer's handler using
 	  :c:func:`schedule_work`.
 
-Kernel thread
--------------
+6. Kernel thread
+----------------
 
 Implement a simple module that creates a kernel thread that shows the
 current process identifier.
 
-Generate the skeleton for *deferred_work/6-kthread* follow the TODOs
-from the skeleton.
+Generate the skeleton for the task named **6-kthread** and follow the
+TODOs from the skeleton.
 
 
 .. note:: There are two options for creating and running a thread:
@@ -897,8 +897,8 @@ from the skeleton.
 	  Use atomic variables for flags. Review `Atomic variable`_.
 
 
-Buffer shared between timer and process
----------------------------------------
+7. Buffer shared between timer and process
+------------------------------------------
 
 The purpose of this task is to exercise the synchronization between a
 deferrable action (a timer) and process context. Setup a periodic
