@@ -572,17 +572,10 @@ tested and the nr is the bit on which the operation is performed.
 Exercises
 =========
 
-.. important:: The skeleton code is generated from full source examples
-   located in ``tools/labs/templates``. To solve the tasks start by
-   generating the skeleton code, running the skels target in ``tools/labs``.
+.. important::
 
-   .. code-block:: bash
-
-     tools/labs $ make clean
-     tools/labs$ LABS=kernel_api make skels
-
-   All paths below are relative to skeleton base directory ``tools/labs/skels/kernel_api``.
-
+    .. include:: exercises-summary.hrst
+    .. |LAB_NAME| replace:: kernel_api
 
 0. Intro
 --------
