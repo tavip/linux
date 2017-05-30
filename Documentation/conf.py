@@ -42,6 +42,9 @@ if major == 1 and minor > 3:
 else:
     extensions.append("sphinx.ext.pngmath")
 
+if os.path.exists('/usr/local/bin/hieroglyph'):
+	extensions.append('hieroglyph')
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
