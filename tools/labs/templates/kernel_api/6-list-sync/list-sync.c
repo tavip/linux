@@ -1,5 +1,7 @@
 /*
- * SO2 lab3 - task 6
+ * Linux API lab
+ *
+ * list-sync.c - Synchronize access to a list
  */
 
 #include <linux/module.h>
@@ -13,8 +15,6 @@ MODULE_DESCRIPTION("Full list processing with synchronization");
 MODULE_AUTHOR("SO2");
 MODULE_LICENSE("GPL");
 
-#define LOG_LEVEL	KERN_ALERT
-
 struct task_info {
 	pid_t pid;
 	unsigned long timestamp;
@@ -23,6 +23,8 @@ struct task_info {
 };
 
 static struct list_head head;
+
+/* TODO: you can use either a spinlock or rwlock, define it here */
 DEFINE_RWLOCK(lock);
 
 static struct task_info *task_info_alloc(int pid)
@@ -44,14 +46,17 @@ static struct task_info *task_info_find_pid(int pid)
 	struct list_head *p;
 	struct task_info *ti;
 
+	/* TODO: Protect list, is this read or write access? */
 	read_lock(&lock);
 	list_for_each(p, &head) {
 		ti = list_entry(p, struct task_info, list);
 		if (ti->pid == pid) {
+			/* TODO: Guess why this comment was added  here */
 			read_unlock(&lock);
 			return ti;
 		}
 	}
+	/* TODO: critical section ends here */
 	read_unlock(&lock);
 
 	return NULL;
@@ -69,8 +74,10 @@ static void task_info_add_to_list(int pid)
 	}
 
 	ti = task_info_alloc(pid);
+	/* TODO: protect list access, is this read or write access? */
 	write_lock(&lock);
 	list_add(&ti->list, &head);
+	/* TODO: critical section ends here */
 	write_unlock(&lock);
 }
 
@@ -88,14 +95,17 @@ void task_info_print_list(const char *msg)
 	struct list_head *p;
 	struct task_info *ti;
 
-	printk(LOG_LEVEL "%s: [ ", msg);
+	pr_info("%s: [ ", msg);
+
+	/* TODO: Protect list, is this read or write access? */
 	read_lock(&lock);
 	list_for_each(p, &head) {
 		ti = list_entry(p, struct task_info, list);
-		printk("(%d, %lu) ", ti->pid, ti->timestamp);
+		pr_info("(%d, %lu) ", ti->pid, ti->timestamp);
 	}
+	/* TODO: Critical section ends here */
 	read_unlock(&lock);
-	printk("]\n");
+	pr_info("]\n");
 }
 EXPORT_SYMBOL(task_info_print_list);
 
@@ -104,6 +114,7 @@ void task_info_remove_expired(void)
 	struct list_head *p, *q;
 	struct task_info *ti;
 
+	/* TODO: Protect list, is this read or write access? */
 	write_lock(&lock);
 	list_for_each_safe(p, q, &head) {
 		ti = list_entry(p, struct task_info, list);
@@ -112,6 +123,7 @@ void task_info_remove_expired(void)
 			kfree(ti);
 		}
 	}
+	/* TODO: Critical section ends here */
 	write_unlock(&lock);
 }
 EXPORT_SYMBOL(task_info_remove_expired);
@@ -121,12 +133,14 @@ static void task_info_purge_list(void)
 	struct list_head *p, *q;
 	struct task_info *ti;
 
+	/* TODO: Protect list, is this read or write access? */
 	write_lock(&lock);
 	list_for_each_safe(p, q, &head) {
 		ti = list_entry(p, struct task_info, list);
 		list_del(p);
 		kfree(ti);
 	}
+	/* TODO: Critical sections ends here */
 	write_unlock(&lock);
 }
 

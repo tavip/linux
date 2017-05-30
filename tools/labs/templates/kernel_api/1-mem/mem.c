@@ -1,5 +1,7 @@
 /*
- * SO2 lab3 - task 1
+ * Kernel API lab
+ * 
+ * mem.c - Memory allocation in Linux
  */
 
 #include <linux/module.h>
@@ -12,8 +14,6 @@ MODULE_DESCRIPTION("Print memory");
 MODULE_AUTHOR("SO2");
 MODULE_LICENSE("GPL");
 
-#define LOG_LEVEL	KERN_ALERT
-
 static char *mem;
 
 static int mem_init(void)
@@ -24,12 +24,12 @@ static int mem_init(void)
 	if (mem == NULL)
 		goto err_mem;
 
-	printk(LOG_LEVEL "chars: ");
+	pr_info("chars: ");
 	for (i = 0; i < 4096; i++) {
 		if (isalpha(mem[i]))
 			printk("%c ", mem[i]);
 	}
-	printk("\n");
+	pr_info("\n");
 
 	return 0;
 

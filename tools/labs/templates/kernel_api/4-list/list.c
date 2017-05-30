@@ -1,5 +1,8 @@
 /*
- * SO2 lab3 - task 4
+ * Kernel API lab
+ *
+ * list.c: Working with lists
+ * 
  */
 
 #include <linux/module.h>
@@ -12,8 +15,6 @@
 MODULE_DESCRIPTION("Use list to process task info");
 MODULE_AUTHOR("SO2");
 MODULE_LICENSE("GPL");
-
-#define LOG_LEVEL	KERN_ALERT
 
 struct task_info {
 	pid_t pid;
@@ -40,12 +41,14 @@ static void task_info_add_to_list(int pid)
 {
 	struct task_info *ti;
 
+	/* TODO 1/2: Allocate task_info and add it to list */
 	ti = task_info_alloc(pid);
 	list_add(&ti->list, &head);
 }
 
 static void task_info_add_for_current(void)
 {
+	/* Add current, parent, next and next of next to the list */
 	task_info_add_to_list(current->pid);
 	task_info_add_to_list(current->parent->pid);
 	task_info_add_to_list(next_task(current)->pid);
@@ -57,12 +60,12 @@ static void task_info_print_list(const char *msg)
 	struct list_head *p;
 	struct task_info *ti;
 
-	printk(LOG_LEVEL "%s: [ ", msg);
+	pr_info(LOG_LEVEL "%s: [ ", msg);
 	list_for_each(p, &head) {
 		ti = list_entry(p, struct task_info, list);
-		printk("(%d, %lu) ", ti->pid, ti->timestamp);
+		pr_info("(%d, %lu) ", ti->pid, ti->timestamp);
 	}
-	printk("]\n");
+	pr_info("]\n");
 }
 
 static void task_info_purge_list(void)
@@ -70,6 +73,7 @@ static void task_info_purge_list(void)
 	struct list_head *p, *q;
 	struct task_info *ti;
 
+	/* TODO 2/5: Iterate over the list and delete all elements */
 	list_for_each_safe(p, q, &head) {
 		ti = list_entry(p, struct task_info, list);
 		list_del(p);

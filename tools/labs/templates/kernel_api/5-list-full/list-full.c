@@ -1,5 +1,7 @@
 /*
- * SO2 lab3 - task 5
+ * Kernel API lab
+ * 
+ * list-full.c: Working with lists (advanced)
  */
 
 #include <linux/module.h>
@@ -12,8 +14,6 @@
 MODULE_DESCRIPTION("Full list processing");
 MODULE_AUTHOR("SO2");
 MODULE_LICENSE("GPL");
-
-#define LOG_LEVEL	KERN_ALERT
 
 struct task_info {
 	pid_t pid;
@@ -43,6 +43,7 @@ static struct task_info *task_info_find_pid(int pid)
 	struct list_head *p;
 	struct task_info *ti;
 
+	/* TODO 1/5: Look for pid and return task_info or NULL if not found */
 	list_for_each(p, &head) {
 		ti = list_entry(p, struct task_info, list);
 		if (ti->pid == pid)
@@ -80,12 +81,12 @@ static void task_info_print_list(const char *msg)
 	struct list_head *p;
 	struct task_info *ti;
 
-	printk(LOG_LEVEL "%s: [ ", msg);
+	pr_info(LOG_LEVEL "%s: [ ", msg);
 	list_for_each(p, &head) {
 		ti = list_entry(p, struct task_info, list);
-		printk("(%d, %lu) ", ti->pid, ti->timestamp);
+		pr_info("(%d, %lu) ", ti->pid, ti->timestamp);
 	}
-	printk("]\n");
+	pr_info("]\n");
 }
 
 static void task_info_remove_expired(void)
@@ -131,6 +132,7 @@ static void list_full_exit(void)
 {
 	struct task_info *ti;
 
+	/* TODO 2/2: Ensure that at least one task is not deleted */
 	ti = list_entry(head.prev, struct task_info, list);
 	atomic_set(&ti->count, 10);
 
