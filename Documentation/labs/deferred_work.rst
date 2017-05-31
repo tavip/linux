@@ -4,6 +4,10 @@ Deferred work
 
 .. slideconf::
    :theme: single-level
+   :autoslides: false
+
+.. slide:: Deferred work
+   :level: 1
 
 Lab objectives
 ==============
@@ -13,10 +17,18 @@ Lab objectives
 * Implementation of common tasks that uses deferred work
 * Understanding the peculiarities of synchronization for deferred work
 
-
 Keywords: softirq, tasklet, struct tasklet_struct, bottom-half
 handlers, jiffies, HZ, timer, struct timer_list, spin_lock_bh,
 spin_unlock_bh, workqueue, struct work_struct, kernel thread, events/x
+
+.. slide:: Laboratory objectives
+   :level: 2
+
+   * Understating deferred work (i.e. code scheduled to be executed at a
+     later time)
+   * Implementation of common tasks that uses deferred work
+   * Understanding the peculiarities of synchronization for deferred
+     work
 
 Background information
 ======================
@@ -37,6 +49,18 @@ interrupt handler and schedule an asynchronous action from the
 interrupt handler to run at a later time and execute the rest of the
 operations.
 
+.. slide:: Why do we need to defer work?
+   :level: 2
+
+   * The execution time of the interrupt handler must be as small as
+     possible
+   * In interrupt context we can not use blocking calls
+
+     Using deferred work we can perform the minimum required work in
+     the interrupt handler and schedule an asynchronous action from
+     the interrupt handler to run at a later time and execute the rest
+     of the operations.
+
 Deferred work that runs in interrupt context is also known as
 bottom-half, since its purpose is to execute the rest of the actions
 from an interrupt handler (top-half).
@@ -48,6 +72,17 @@ Kernel threads are not themselves deferred work, but can be used to
 complement the deferred work mechanisms. In general, kernel threads
 are used as "workers" to process events whose execution contains
 blocking calls.
+
+.. slide:: Types of deferred work
+   :level: 2
+
+   * Bottom-half handlers - run in interrupt context
+
+     * softirqs
+     * tasklets
+   * Timers - run in interrupt context
+   * Workqueues
+   * Kernel thread
 
 There are three typical operations that are used with all types of
 deferred work:
@@ -62,13 +97,23 @@ deferred work:
    that the handler will not run after the completion of canceling) or
    asynchronous.
 
+.. slide:: Typical operations for deferred work
+   :level: 2
+
+   * **Initialization**: initialize structure and set the handler
+     function
+
+   * **Scheduling**: schedules the execution of the handler
+
+   * **Masking** or **Canceling**: disables (sync or async) the
+     execution of the handler
+
 
 .. attention:: When doing deferred work cleanup, like freeing the
 	       structures associated with the deferred work or
 	       removing the module and thus the handler code from the
 	       kernel, always use the synchronous type of canceling
 	       the deferred work.
-
 
 The main types of deferred work are kernel threads and softirqs. Work
 queues are implemented on top of kernel threads and tasklets and
@@ -132,6 +177,19 @@ not call blocking functions. If the sofitrq handler requires calls to
 such functions, work queues can be scheduled to execute these blocking
 calls.
 
+.. slide:: Softirqs
+   :level: 2
+
+   Bottom-half handlers that are fixed and reserved for subsystems:
+
+      * *HI_SOFTIRQ* and *TASKLET_SOFTIRQ*
+      * *TIMER_SOFTIRQ*
+      * *NET_TX_SOFIRQ* and *NET_RX_SOFTIRQ*
+      * *BLOCK_SOFTIRQ* and *BLOCK_IOPOLL_SOFTIRQ*
+      * *SCHED_SOFTIRQ*
+      * *HRTIMER_SOFTIRQ*
+      * *RCU_SOFTIRQ*
+
 Tasklets
 --------
 
@@ -192,6 +250,23 @@ Tasklets can be masked and the following functions can be used:
 Remember that since tasklets are running from softirqs, blocking calls
 can not be used in the handler function.
 
+.. slide:: Tasklets
+   :level: 2
+
+   Dynamic bottom-half handler that can be used by device drivers.
+
+   .. code-block:: c
+
+      void handler(unsigned long data);
+
+      DECLARE_TASKLET(tasklet, handler, data);
+
+      void tasklet_schedule(struct tasklet_struct *tasklet);
+      void tasklet_hi_schedule(struct tasklet_struct *tasklet);
+
+      void tasklet_enable(struct tasklet_struct * tasklet );
+      void tasklet_disable(struct tasklet_struct * tasklet );
+
 Timers
 ------
 
@@ -236,7 +311,7 @@ the following formulas are used:
    seconds_value = jiffies_value / HZ ;
 
 The kernel mantains a counter that contains the number of jiffies
-since the last boot, which can be accessed via the :c:type:`jiffies`
+since the last boot, which can be accessed via the :c:macro:`jiffies`
 global variable or macro. We can use it to calculate a time in the
 future for timers:
 
@@ -290,6 +365,26 @@ And to stop it:
 
    del_timer_sync(&timer);
 
+.. slide:: Timers
+   :level: 2
+
+   * The time unit timers is *jiffie*.
+
+   * :c:macro:`HZ`  defines the number of jiffies for 1 second.
+
+   .. code-block:: c
+
+      #include <linux / sched.h>
+
+      void setup_timer(struct timer_list * timer,
+		       void (*function)(unsigned long),
+		       unsigned long data);
+
+      int mod_timer(struct timer_list *timer, unsigned long expires);
+
+      int del_timer(struct timer_list *timer);
+      int del_timer_sync(struct timer_list *timer);
+
 Locking
 -------
 
@@ -337,6 +432,18 @@ calls for synchronization like :c:func:`spin_lock_bh` and
 
    void spin_lock_bh(spinlock_t *lock);
    void spin_unlock_bh(spinlock_t *lock);
+
+
+.. slide:: Locking
+   :level: 2
+
+   .. code-block:: c
+
+      void spin_lock_bh(spinlock_t *lock);
+      void spin_unlock_bh(spinlock_t *lock);
+
+      void local_bh_disable(void);
+      void local_bh_enable(void);
 
 Workqueues
 ----------
@@ -424,8 +531,26 @@ the task will no longer run.
 	       use them when you are performing cleanup work otherwise
 	       race condition could occur.
 
-We can wait for a workqueue to complete running all of its work items by calling :c:func:`flush_scheduled_work`:
+.. slide:: Workqueues
+   :level: 2
 
+   Workqueues are used to schedule actions to run in process context.
+
+   .. code-block:: c
+
+      #include <linux/workqueue.h>
+
+      void my_work_handler(struct work_struct *work);
+
+      DECLARE_WORK(my_work, my_work_handler);
+
+      schedule_work(struct work_struct *work);
+      schedule_delayed_work(struct delayed_work *work, unsigned long delay);
+
+      int cancel_work_sync(struct delayed_work *work);
+      int cancel_delayed_work_sync(struct delayed_work *work);
+
+We can wait for a workqueue to complete running all of its work items by calling :c:func:`flush_scheduled_work`:
 
 .. code-block:: c
 
@@ -481,6 +606,24 @@ use :c:func:`container_of`:
       my_data = container_of(work, struct my_device_data,  my_work);
       // ...
    }
+
+.. slide:: Passing data to the work handler
+   :level: 2
+
+   .. code-block:: c
+
+      struct my_device_data {
+	  struct work_struct my_work;
+	  // ...
+      };
+
+      void my_work_handler(struct work_struct *work)
+      {
+	  structure my_device_data * my_data;
+
+	  my_data = container_of(work, struct my_device_data,  my_work);
+	  // ...
+      }
 
 Scheduling work items with the functions above will run the handler in
 the context of a thread kernel called *events/x*, where x is the
@@ -618,6 +761,27 @@ kernel thread:
    struct task_struct * kthread_run(int (*threadfn)(void *data)
 				    void *data, const char namefmt[], ...);
 
+
+.. slide:: Kernel threads
+   :level: 2
+
+   A thread kernel is a thread that only runs in kernel mode and has
+   no user address space or other user attributes.
+
+   .. code-block:: c
+
+      #include <linux/kthread.h>
+      #include <linux/sched.h>
+
+      structure task_struct *kthread_create(int (*threadfn)(void *data),
+					    void *data, const char namefmt[], ...);
+
+      int wake_up_process(struct task_struct *p);
+
+      struct task_struct * kthread_run(int (*threadfn)(void *data)
+				       void *data, const char namefmt[], ...);
+
+
 Even if the programming restrictions for the function running within
 the kernel thread are more relaxed and scheduling is closer to
 scheduling in userspace, there are, however, some limitations to be
@@ -682,7 +846,7 @@ common mistakes:
        while (true) {
 	   wait_event(wq, (e = get_next_event));
 
-	   /* Event processing * /
+	   /* Event processing */
 
 	   if (e->stop)
 	       break;
@@ -700,13 +864,69 @@ with:
 
 .. code-block:: c
 
-   void send_cerere ( event structure * ev )
+   void send_event(struct event *ev)
    {
        spin_lock(&events_lock);
        list_add(&ev->lh, &list_events);
        spin_unlock(events_lock);
        wake_up(&wq);
    }
+
+.. slide:: Kernel thread template - definitions
+   :level: 2
+
+   .. code-block:: c
+
+      #include <linux/kthread.h>
+
+      DECLARE_WAIT_QUEUE_HEAD(wq);
+
+      // list events to be processed by kernel thread
+      structure list_head events_list;
+      struct spin_lock events_lock;
+
+
+      // structure describing the event to be processed
+      struct event {
+	  struct list_head lh;
+	  bool stop;
+	  //...
+      };
+
+.. slide:: Kernel thread template - event loop
+   :level: 2
+
+   .. code-block:: c
+
+      int my_thread_f(void *data)
+      {
+	  struct event *e;
+
+	  while (true) {
+	      wait_event(wq, (e = get_next_event));
+
+	      /* Event processing */
+
+	      if (e->stop)
+		  break;
+	   }
+
+	   do_exit(0);
+      }
+
+.. slide:: Kernel thread template - queue event
+   :level: 2
+
+   .. code-block:: c
+
+      void send_event(struct event *ev)
+      {
+	  spin_lock(&events_lock);
+	  list_add(&ev->lh, &list_events);
+	  spin_unlock(events_lock);
+	  wake_up(&wq);
+      }
+
 
 Further reading
 ===============
