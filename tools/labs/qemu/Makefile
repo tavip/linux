@@ -40,7 +40,7 @@ $(ZIMAGE): $(KCONFIG)
 	mkdir $(TEMPDIR)
 	sudo mount -t ext4 -o loop $(YOCTO_IMAGE) $(TEMPDIR)
 	sudo $(MAKE) -C $(KDIR) modules_install INSTALL_MOD_PATH=$(TEMPDIR)
-	sudo umount $(YOCTO_IMAGE)
+	sudo umount $(TEMPDIR)
 	rmdir $(TEMPDIR)
 	sleep 1 && touch .modinst
 
