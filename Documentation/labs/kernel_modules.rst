@@ -12,6 +12,12 @@ Kernel modules
 Lab objectives
 ==============
 
+.. slide:: Lab objectives
+
+   * create simple kernel modules
+   * describe the compilation process
+   * simple kernel debugging methods
+
 * creating simple modules
 * describing the process of kernel module compilation
 * presenting how a module can be used with a kernel
