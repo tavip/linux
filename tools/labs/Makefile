@@ -27,7 +27,7 @@ copy: $(YOCTO_IMAGE)
 	mkdir $(TEMPDIR)
 	sudo mount -t ext4 -o loop $(YOCTO_IMAGE) $(TEMPDIR)
 	find skels -type f \( -name *.ko -or -executable \) | xargs sudo cp --parents -t $(TEMPDIR)/home/root || true
-	sudo umount $(YOCTO_IMAGE)
+	sudo umount $(TEMPDIR)
 	rmdir $(TEMPDIR)
 
 docs:
