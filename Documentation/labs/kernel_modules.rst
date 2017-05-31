@@ -922,7 +922,7 @@ Exercises
 0. Intro
 --------
 
-Find the definitions of the following symbols in the Linux kernel:
+Using |LXR|_ find the definitions of the following symbols in the Linux kernel:
 
 * :c:func:`module_init` and :c:func:`module_exit`
 
