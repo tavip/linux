@@ -1154,7 +1154,7 @@ Return to the initial configuration of the module.
 3. Open and close
 -----------------
 
-Run ``cat /dev_so2_cdev`` to read data from our char device.
+Run ``cat /dev/so2_cdev`` to read data from our char device.
 Reading does not work because the driver does not have the open function implemented.
 Follow comments marked with TODO 2 and implement them.
 
