@@ -4,6 +4,10 @@ Memory mapping
 
 .. slideconf::
    :theme: single-level
+   :autoslides: false
+
+.. slide:: Memory mapping
+   :level: 1
 
 Lab objectives
 ==============
@@ -15,6 +19,14 @@ Keywords: address space, mmap, :c:type:`struct page`, :c:type:`struct
 vm_area_struct`, :c:type:`struct vm_struct`,
 :c:type:`remap_pfn_range`, :c:func:`SetPageReserved`,
 :c:func:`ClearPageReserved`
+
+.. slide:: Lab objectives
+   :level: 2
+
+   * Understand address space mapping mechanisms
+
+   * Learn about the most important structures related to memory
+     management
 
 Background information
 ======================
@@ -44,6 +56,15 @@ A physical page of memory is identified by the Page Frame Number
 dividing it with the size of the page (or by shifting the physical
 address with PAGE_SHIFT bits to the right).
 
+.. image:: paging.png
+   :width: 49 %
+
+
+.. slide:: Paging
+   :level: 2
+
+   .. image:: paging.png
+
 For efficiency reasons, the virtual address space is divided into
 user-space and kernel-space. For the same reason, the kernel-space
 contains memory mapped zone. called lowmem, which is contiguously
@@ -55,10 +76,18 @@ On 32bit system not all available memory can be mapped in lowmem and
 because of that there is a separate zone in kernel-space called
 highmem which can be used to arbitrarily map physical memory.
 
-.. note:: Memory allocated by :c:func:`kmalloc` resides in lowmem and
-	  it is physically contiguous. Memory allocated with
-	  :c:func:`vmalloc` is not contiguous and does not reside in
-	  lowmem (it has a dedicated zone in kernel space).
+Memory allocated by :c:func:`kmalloc` resides in lowmem and it is
+physically contiguous. Memory allocated with :c:func:`vmalloc` is not
+contiguous and does not reside in lowmem (it has a dedicated zone in
+high mem).
+
+.. image:: kernel-virtmem-map.png
+   :width: 49 %
+
+.. slide:: Kernel virtual memory map
+   :level: 2
+
+   .. image:: kernel-virtmem-map.png
 
 Memory Structures
 -----------------
@@ -70,9 +99,9 @@ subsystem of the Linux kernel.
 :c:type:`struct page`
 ---------------------
 
-:c:type:`struct page` is used to describe a memory physical page. The
-kernel maintains a :c:type:`struct page` for all memory physical
-pages in the system.
+:c:type:`struct page` is used to describe a physical memory page. The
+kernel maintains a :c:type:`struct page` for all memory physical pages
+in the system.
 
 There are many functions that interact with this structure:
 
@@ -88,6 +117,22 @@ There are many functions that interact with this structure:
 * :c:func:`kmap` creates a mapping in kernel for an arbitrary physical
   page (can be from highmem) and returns a virtual address that can be
   used to directly reference the page
+
+.. slide:: :c:type:`struct page`
+   :level: 2
+
+   Describes a physical memory page.
+
+   * :c:func:`virt_to_page`
+
+   * :c:func:`pfn_to_page`
+
+   * :c:func:`page_to_pfn`
+
+   * :c:func:`page_address`
+
+   * :c:func:`kmap`
+
 
 :c:type:`struct vm_area_struct`
 -------------------------------
@@ -128,6 +173,16 @@ vm_area_struct`. The most important fields of this structure are:
 * vm_next, vm_prev - the areas of the same process are chained by a
   list structure
 
+.. slide:: :c:type:`struct vm_area_struct`
+   :level: 2
+
+   Information about a contiguous virtual memory area:
+
+   * vm_start, vm_end
+   * vm_file, vm_pgoff
+   * vm_flags
+   * vm_ops
+
 
 :c:type:`struct mm_struct`
 --------------------------
@@ -135,6 +190,13 @@ vm_area_struct`. The most important fields of this structure are:
 :c:type:`struct mm_struct` encompasses all memory areas associated
 with a process. The *mm* field of :c:type:`struct task_struct` is a
 pointer to the :c:type:`struct mm_struct` of the current process.
+
+.. slide:: :c:type:`struct mm_struct`
+   :level: 2
+
+   All memory areas associated with a process. The *mm* field of
+   :c:type:`struct task_struct` is a pointer to the :c:type:`struct
+   mm_struct` of the current process.
 
 Device driver memory mapping
 ============================
@@ -173,6 +235,22 @@ by the device. A driver should allocate memory (using
 map it to the user address space as indicated by the *vma* parameter
 using helper functions such as :c:func:`remap_pfn_range`.
 
+.. slide:: Device driver memory mapping
+   :level: 2
+
+   mmap userspace system call:
+
+   .. code-block:: c
+
+      void *mmap(caddr_t addr, size_t len, int prot, int flags,
+		 int fd, off_t offset);
+
+   Driver mmap operation:
+
+   .. code-block:: c
+
+      int (*mmap)(structure file *filp, struct vm_area_struct *vma);
+
 :c:func:`remap_pfn_range` will map a contiguous physical address space
 into the virtual space represented by :c:type:`vm_area_struct`:
 
@@ -207,6 +285,21 @@ previously allocated) to the *vma->vm_start* virtual address:
        pr_err("could not map the address area\n");
        return -EIO;
    }
+
+.. slide:: Mapping a physical memory range into userspace
+   :level: 2
+
+   .. code-block:: c
+
+      struct vm_area_struct * vma;
+      unsigned long len = vma->vm_end - vma->vm_start;
+      int ret;
+
+      ret = remap_pfn_range(vma, vma->vm_start, pfn, len, vma->vm_page_prot);
+      if (ret < 0) {
+	  pr_err("could not map the address area\n");
+	  return -EIO;
+      }
 
 
 To obtain the page frame number of the physical memory we must
@@ -243,6 +336,21 @@ and finally for :c:func:`alloc_pages`:
 	       range we have to map each page individually and compute
 	       the physical address for each each page.
 
+.. slide:: Getting the PFN
+   :level: 2
+
+   * For memory from lowmem:
+
+     .. code-block:: c
+
+	virt_to_phys(vaddr) >> PAGE_SHIFT
+
+   * For vmalloc memory:
+
+     .. code-block:: c
+
+	vmalloc_to_pfn(vmalloc_area);
+
 Since the pages are mapped to user-space, they might be swapped
 out. To avoid this we must set the PG_reserved bit on the page.
 Enabling is done using :c:func:`SetPageReserved` while reseting it
@@ -274,6 +382,18 @@ Enabling is done using :c:func:`SetPageReserved` while reseting it
 
        kfree(mem);
    }
+
+.. slide:: Lock/unlock pages into/from memory
+   :level: 2
+
+   .. code-block:: c
+
+      for(i = 0; i < npages * PAGE_SIZE; i += PAGE_SIZE) {
+	  SetPageReserved(virt_to_page(((unsigned long)mem) + i));
+
+      for(i = 0; i < npages * PAGE_SIZE; i += PAGE_SIZE) {
+	  ClearPageReserved(virt_to_page(((unsigned long)mem) + i));
+
 
 Further reading
 ===============
