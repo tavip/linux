@@ -4,6 +4,11 @@ I/O access and Interrupts
 
 .. slideconf::
    :theme: single-level
+   :autoslides: false
+
+.. slide:: I/O access and Interrupts
+   :level: 1
+
 
 Lab objectives
 ==============
@@ -14,8 +19,37 @@ Lab objectives
 
 Keywords: IRQ, I/O port, I/O address, base address, UART, request_region, release_region, inb, outb
 
+.. slide:: Laboratory objectives
+   :level: 2
+
+   * communication with peripheral devices
+   * implement interrupt handlers
+   * synchronizing interrupts with process context
+
 Background information
 ======================
+
+.. slide:: I/O concepts
+   :level: 2
+
+   * A device is controlled by writing and reading its registers
+
+   * Device's registers can be mapped:
+
+     * in I/O space; the I/O space contains a range of I/O ports
+
+     * in memory space
+
+   * Typical device registers:
+
+     * **Control** registers
+
+     * **Status** registers
+
+     * **Input** registers
+
+     * **Output** registers
+
 
 A peripheral device is controlled by writing and reading its
 registers. Often, a device has multiple registers that can be accessed
@@ -64,6 +98,20 @@ are no longer needed. In addition, in some situations, device drivers
 must share an interrupt or synchronize with interrupts. All of these will be
 discussed further.
 
+.. slide:: Interrupt concepts
+   :level: 2
+
+   * The device will send an Interrupt ReQuest to the CPU
+
+     * the CPU will save the current context
+
+     * run an interrupt handler
+
+     * restore the saved context
+
+   * Interrupt handlers are implemented by device drivers
+
+
 When we need to access shared resources between an interrupt
 routine (A) and code running in process context or in bottom-half
 context (B), we must use a special synchronization technique. In (A)
@@ -106,6 +154,19 @@ To release a reserved region one must use the :c:func:`release_region` function:
 .. code-block:: c
 
    void release_region(unsigned long start, unsigned long n);
+
+
+.. slide:: Requesting access to I/O ports
+   :level: 2
+
+   .. code-block:: c
+
+      #include <linux/ioport.h>
+
+      struct resource *request_region(unsigned long first, unsigned long n,
+				      const char *name);
+
+      void release_region(unsigned long start, unsigned long n);
 
 For example, the serial port COM1 has the base address 0x3F8 and it
 has 8 ports and this is a code snippet of how to request access to
@@ -157,6 +218,24 @@ All of the port requests can be seen from userspace via the /proc/ioports file:
    03f8-03ff : serial
    ...
 
+.. slide:: /proc/ioports
+   :level: 2
+
+   All of the port requests can be seen from userspace via the
+   /proc/ioports file:
+
+   .. code-block:: shell
+
+      $ cat /proc/ioports
+      0000-001f : dma1
+      0020-0021 : pic1
+      0040-005f : timer
+      0060-006f : keyboard
+      0070-0077 : rtc
+      0080-008f : dma page reg
+      ...
+
+
 Accessing I/O ports
 -------------------
 
@@ -177,6 +256,16 @@ following port access functions are defined in asm/io.h:
 The port argument specifies the address of the port where the reads or
 writes are done, and its type is platform dependent (may be unsigned
 long or unsigned short).
+
+.. slide:: Accessing I/O ports
+   :level: 2
+
+   * *unsigned inb(int port)*, read one byte (8 bits) from port
+   * *void outb(unsigned char byte, int port)*, write one byte (8 bits) to port
+   * *unsigned inw(int port)*, read two bytes (16-bit) ports
+   * *void outw(unsigned short word, int port)* writes two bytes (16-bits) to port
+   * *unsigned inl (int port)*, reads four bytes (32-bits) from port
+   * *void outl(unsigned long word, int port)* write four bytes (32-bits) to port
 
 Some devices may have problems when the processor is trying to
 transfer data too fast to and from the device. To avoid this issue we
@@ -226,6 +315,23 @@ first 3 ports of the serial port, and then releases them:
 The third parameter of the ioperm function is used to request or
 release port permission: 1 to get permission and 0 to release.
 
+.. slide:: Accessing I/O ports from userspace
+   :level: 2
+
+   .. code-block:: c
+
+      #include <sys/io.h>
+      #define MY_BASEPORT 0x3F8
+
+      if (ioperm(MY_BASEPORT, 3, 1)) {
+	  /* handle error */
+      }
+
+      if (ioperm(MY_BASEPORT, 3, 0)) {
+	  /* handle error */
+      }
+
+
 Interrupt handling
 ==================
 
@@ -245,9 +351,26 @@ the :c:func:`requests_irq` and :c:func:`free_irq` functions:
    typedef irqreturn_t (*irq_handler_t)(int, void *);
 
    int request_irq(unsigned int irq_no, irq_handler_t handler,
-   unsigned long flags, const char *dev_name, void *dev_id);
+		   unsigned long flags, const char *dev_name, void *dev_id);
 
    void free_irq(unsigned int irq_no, void *dev_id);
+
+.. slide:: Requesting an interrupt
+   :level: 2
+
+   .. code-block:: c
+
+      #include <linux/interrupt.h>
+
+      typedef irqreturn_t (*irq_handler_t)(int, void *);
+
+      int request_irq(unsigned int irq_no, irq_handler_t handler,
+		      unsigned long flags, const char *dev_name, void *dev_id);
+      int request_threaded_irq(unsigned int irq, irq_handler_t handler,
+			       irq_handler_t thread_fn,
+			       unsigned long flags, const char *name, void *dev);
+
+      void free_irq(unsigned int irq_no, void *dev_id);
 
 Note that to get an interrupt, the developer calls
 :c:func:`request_irq`. When calling this function you must specify the
@@ -368,7 +491,6 @@ following operations will be executed:
    free_irq (MY_IRQ, my_data);
 
 
-
 During the initialization functiom (c:func:`init_module`), or in the
 function that opens the device, interrupts must be activated for the
 device. This operation is dependent on the device, but most often
@@ -444,6 +566,24 @@ the physical device as most devices will no longer generate
 interruptions until this bit has been reset (e.g. for the 8250
 serial port bit 0 in the IIR register must be cleared).
 
+.. slide:: Implementing an interrupt handler
+   :level: 2
+
+   .. code-block:: c
+
+      irqreturn_t my_handler(int irq_no, void *dev_id)
+      {
+	  struct my_device_data *my_data = (struct my_device_data *) dev_id;
+
+	  /* if interrupt is not for this device (shared interrupts) */
+	      /* return IRQ_NONE;*/
+
+	  /* clear interrupt-pending bit */
+	  /* read from device or write to device*/
+
+	  return IRQ_HANDLED;
+      }
+
 
 Locking
 -------
@@ -460,6 +600,37 @@ using interrupts, such as when data is shared between the interrupt
 handler and process context or bottom-half handlers. In these
 situations it is necessary to both deactivate the interrupt and use
 spinlocks.
+
+.. slide:: Common interrupt synchronization mistakes
+   :level: 2
+
+   1. We run a process process on the X processor, and we acquire the
+      lock
+
+   2. Before releasing the lock, an interrupt is generated on the X
+      processor
+
+   3. The interrupt handling routine will try to acquire the lock and it
+      will go into an infinite loop
+
+.. slide:: Proper synchronization with interrupts
+   :level: 2
+
+   * In the interrupt handler: use spinlocks to protect against other
+     processors
+
+   * In process context: disable interrupts to protect against the
+     interrupt handler and use spinlock to protect against other
+     processors
+
+.. slide:: Disabling interrupts
+   :level: 2
+
+   * At the local CPU level
+
+   * At the IRQ controller
+
+   * At the device level (e.g. control registers of the device)
 
 There are two ways to disable interrupts: disabling all interrupts, at
 the processor level, or disabling a particular interrupt at the device
@@ -483,6 +654,20 @@ the same time: :c:func:`spin_lock_irqsave`,
 The :c:func:`spin_lock_irqsave` function disables interrupts for the
 local processor before it obtains the spinlock; The previous state of
 the interrupts is saved in *flags*.
+
+.. slide:: Common synchronization APIs between interrupt handler and
+	   process context
+   :level: 2
+
+   .. code-block:: c
+
+      #include <linux/spinlock.h>
+
+      void spin_lock_irqsave (spinlock_t * lock, unsigned long flags);
+      void spin_unlock_irqrestore (spinlock_t * lock, unsigned long flags);
+
+      void spin_lock_irq (spinlock_t * lock);
+      void spin_unlock_irq (spinlock_t * lock);
 
 If you are absolutely sure that the interrupts on the current
 processor have not already been disabled by someone else and you are
@@ -612,6 +797,27 @@ associated interrupt handlers appear in */proc/interrupts*:
    LOC:         7229438
    ERR:               0
    MIS:               0
+
+.. slide:: Interrupts statistics
+   :level: 2
+
+   .. code-block:: shell
+
+      # cat /proc/interrupts
+		      CPU0
+      0:           7514294       IO-APIC-edge   timer
+      1:              4528       IO-APIC-edge   i8042
+      6:                 2       IO-APIC-edge   floppy
+      8:                 1       IO-APIC-edge   rtc
+      9:                 0       IO-APIC-level  acpi
+      12:             2301       IO-APIC-edge   i8042
+      15:               41       IO-APIC-edge   ide1
+      16:             3230       IO-APIC-level  ioc0
+      17:             1016       IO-APIC-level  vmxnet ether
+      NMI:               0
+      LOC:         7229438
+      ERR:               0
+      MIS:               0
 
 The first column specifies the IRQ associated with the interrupt. The
 following column shows the number of interrupts that were generated
