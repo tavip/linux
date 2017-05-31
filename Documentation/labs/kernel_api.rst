@@ -9,6 +9,18 @@ Kernel API
 .. slide:: Kernel API
    :level: 1
 
+.. slide:: Lab objectives
+   :level: 2
+
+   * familiarize with basic Linux kernel API
+   * introduce core concepts
+
+     * kernel contexts
+     * printk
+     * memory allocation
+     * linked lists
+     * locking
+
 Lab objectives
 ==============
 
