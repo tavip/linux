@@ -1147,7 +1147,7 @@ Modify **MY_MAJOR** so that it points to an already used major number.
 
 .. hint:: See ``/proc/devices`` to get an already assigned major.
 
-See `errno-bash.h <http://elixir.free-electrons.com/linux/v4.9/source/include/uapi/asm-generic/errno-base.h>`_
+See `errno-base.h <http://elixir.free-electrons.com/linux/v4.9/source/include/uapi/asm-generic/errno-base.h>`_
 and figure out what does the error code mean.
 Return to the initial configuration of the module.
 
