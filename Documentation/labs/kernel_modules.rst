@@ -934,7 +934,7 @@ Find the definitions of the following symbols in the Linux kernel:
 1. Module
 ---------
 
-Generate the skeleton for the task named **1-2-test** then build and
+Generate the skeleton for the task named **1-2-test-mod** then build and
 copy the module to the VM. Perform the following tasks:
 
 * load the kernel module.
@@ -960,19 +960,19 @@ Inspect the source code file. Change the source code file so that messages are
 displayed directly on the serial console.
 
 .. hint:: Read the `Printk debugging`_ section of the lab and change
-          the log level of the prints.
+          the log level of the prints in the module source.
+
+.. hint:: Another option is to set the current log level by writting
+          the desired log level to ``/proc/sys/kernel/printk``
 
 .. hint:: An alternative approach is to edit the boot options in
           ``tools/labs/qemu/Makefile``. Add ``ignore_loglevel`` option
 	  to the qemu ``--append`` option.
 
-.. hint:: Another option is to set the current log level by writting
-          the desired log level to ``/proc/sys/kernel/printk``
-
 3. Error
 --------
 
-Generate the skeleton for the task named **1-2-test**. Compile the
+Generate the skeleton for the task named **3-error-mod**. Compile the
 sources and get the corresponding kernel module. Why have compilation
 errors occurred?
 
@@ -998,7 +998,7 @@ are properly displayed on the console.
 5. Kernel oops
 --------------
 
-Generate the skeleton for the task named *5-oops-mod** and inspect the
+Generate the skeleton for the task named **5-oops-mod** and inspect the
 C source file. Notice where the problem will occur. Add -g to
 compilation in the Kbuild file.
 
