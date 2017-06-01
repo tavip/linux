@@ -27,4 +27,5 @@ driver topics. For each topic there are two parts:
    deferred_work.rst
    memory_mapping.rst
    device_model.rst
+   kernel_debug.rst
 
