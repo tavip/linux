@@ -893,7 +893,7 @@ Exercises
 0. Intro
 --------
 
-Find the definitions of the following symbols in the Linux kernel:
+Using |LXR|_, find the definitions of the following symbols in the Linux kernel:
 
 * :c:type:`struct resource`
 * :c:func:`request_region` and :c:func:`__request_region`
