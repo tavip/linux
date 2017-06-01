@@ -218,7 +218,7 @@ static int deferred_init(void)
 	/* TODO 3: Initialize work. */
 	INIT_WORK(&dev.work, work_handler);
 
-	/* TODO 4/5: Initialize lock and list. */
+	/* TODO 4/2: Initialize lock and list. */
 	spin_lock_init(&dev.lock);
 	INIT_LIST_HEAD(&dev.list);
 
