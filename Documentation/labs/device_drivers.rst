@@ -759,7 +759,7 @@ into account the internal buffer size, user buffer size and the offset:
 	      return 0;
 
 	  /* read data from device in my_data->buffer */
-	  if (copy_to_user(user_buffer, my_data->buffer + *offset, len))
+	  if (copy_from_user(my_data->buffer + *offset, user_buffer, len))
 	      return -EFAULT;
 
 	  *offset += len;
