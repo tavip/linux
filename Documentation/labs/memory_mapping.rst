@@ -143,18 +143,23 @@ inspecting the *maps* attribute the process via procfs:
 
 .. code-block:: shell
 
-   $ cat / proc / 1 / maps
-   08048000-0804f000 r-xp 00000000 03:01 401624 / sbin / init
-   0804f000-08050000 rw-p 00007000 03:01 401624 / sbin / init
-   08050000-08071000 rw-p 08050000 00:00 0
-   40000000 - 40016000 r-xp 00000000 03:01 369654 / lib / ld-2.3.2.so
-   40016000 - 40017000 rw-p 00015000 03:01 369654 / lib / ld-2.3.2.so
-   40017000 - 40018000 rw-p 40017000 00:00 0
-   4001d000- 40147000 r-xp 00000000 03:01 371432 / lib / tls / libc-2.3.2.so
-   40147000 - 40150000 rw-p 00129000 03:01 371432 / lib / tls / libc-2.3.2.so
-   40150000 - 40153000 rw-p 40150000 00:00 0
-   Bffff000-c0000000 rw-p bffff000 00:00 0
-   Ffffe000-fffff000 --- p 00000000 00:00 0
+   root@qemux86:~# cat /proc/1/maps
+   #address          perms offset  device inode     pathname
+   08048000-08050000 r-xp 00000000 fe:00 761        /sbin/init.sysvinit
+   08050000-08051000 r--p 00007000 fe:00 761        /sbin/init.sysvinit
+   08051000-08052000 rw-p 00008000 fe:00 761        /sbin/init.sysvinit
+   092e1000-09302000 rw-p 00000000 00:00 0          [heap]
+   4480c000-4482e000 r-xp 00000000 fe:00 576        /lib/ld-2.25.so
+   4482e000-4482f000 r--p 00021000 fe:00 576        /lib/ld-2.25.so
+   4482f000-44830000 rw-p 00022000 fe:00 576        /lib/ld-2.25.so
+   44832000-449a9000 r-xp 00000000 fe:00 581        /lib/libc-2.25.so
+   449a9000-449ab000 r--p 00176000 fe:00 581        /lib/libc-2.25.so
+   449ab000-449ac000 rw-p 00178000 fe:00 581        /lib/libc-2.25.so
+   449ac000-449af000 rw-p 00000000 00:00 0 
+   b7761000-b7763000 rw-p 00000000 00:00 0 
+   b7763000-b7766000 r--p 00000000 00:00 0          [vvar]
+   b7766000-b7767000 r-xp 00000000 00:00 0          [vdso]
+   bfa15000-bfa36000 rw-p 00000000 00:00 0          [stack]
 
 A memory area is characterized by a start address, a stop address,
 length, permissions.
@@ -183,6 +188,22 @@ vm_area_struct`. The most important fields of this structure are:
    * vm_flags
    * vm_ops
 
+.. slide:: Memory areas of a process
+   :level: 2
+
+   .. code-block:: shell
+   
+      root@qemux86:~# cat /proc/1/maps
+      #address          perms offset  device inode     pathname
+      08048000-08050000 r-xp 00000000 fe:00 761        /sbin/init.sysvinit
+      08050000-08051000 r--p 00007000 fe:00 761        /sbin/init.sysvinit
+      08051000-08052000 rw-p 00008000 fe:00 761        /sbin/init.sysvinit
+      092e1000-09302000 rw-p 00000000 00:00 0          [heap]
+      44832000-449a9000 r-xp 00000000 fe:00 581        /lib/libc-2.25.so
+      449a9000-449ab000 r--p 00176000 fe:00 581        /lib/libc-2.25.so
+      449ab000-449ac000 rw-p 00178000 fe:00 581        /lib/libc-2.25.so
+      b7766000-b7767000 r-xp 00000000 00:00 0          [vdso]
+      bfa15000-bfa36000 rw-p 00000000 00:00 0          [stack]
 
 :c:type:`struct mm_struct`
 --------------------------
