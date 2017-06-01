@@ -1239,16 +1239,3 @@ Reset the buffer if the device is written to. For this step follow the
 sections marked with **TODO 5** in the skeleton.
 
 Implement :c:func:`reset_buffer` and add the write operation to *kbd_fops*.
-
-.. hint:: Use the *passcnt* field to count how many password
-	  characters have been matched. The password is defined by the
-	  `MAGIC_WORD` and `MAGIC_WORD_LEN`.
-
-	  Upon receiving a new character, verify that it matches the
-	  character in the current password position. If so, increment
-	  the counter. Otherwise, reset the counter to 0.
-
-	  At the time of resetting the buffer, need to use the
-	  spinlock for exclusive access to the buffer. The read
-	  routine may be processed by another processor and access the
-	  buffer when the interrupt handler changes it.
