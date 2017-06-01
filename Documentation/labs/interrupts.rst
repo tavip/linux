@@ -900,7 +900,7 @@ Using |LXR|_, find the definitions of the following symbols in the Linux kernel:
 * :c:func:`request_irq` and  :c:func:`request_threaded_irq`
 * :c:func:`inb` for the x86 architecture.
 
-Analize the following Linux code:
+Analyze the following Linux code:
 
 * Keyboard initialization function :c:func:`i8042_setup_kbd`
 * The AT or PS/2 keyboard interrupt function :c:func:`atkbd_interrupt`
