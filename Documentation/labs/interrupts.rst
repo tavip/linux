@@ -992,7 +992,7 @@ Lets remove the module and check that the I/O ports are released:
 2. Interrupt handling routine
 -----------------------------
 
-For his task we will implement and register an interrupt handler for
+For this task we will implement and register an interrupt handler for
 the keyboard interrupt. You can review the `Requesting an interrupt`_
 section before proceeding.
 
@@ -1020,7 +1020,7 @@ the keyboard driver (i8042).
 
 	  If the interrupt requesting fails make sure to properly
 	  cleanup by jumping to the right label, in this case the one
-	  the releases the I/O ports and continiues with unregistering
+	  the releases the I/O ports and continues with unregistering
 	  the character device driver.
 
 Compile, copy and load module in the kernel. Check that the interrupt
@@ -1049,7 +1049,7 @@ Next, we want to collect the keystrokes in a buffer whose content we
 will then send to the user space. For this routine we will add the
 following in the interrupt handling:
 
-* capture the pressed keys (only pressed not and released ) /
+* capture the pressed keys (only pressed, ignore released)
 * identify the ASCII characters.
 * copy the ASCII characters corresponding to the keystrokes and store
   them in the buffer of the device
@@ -1236,7 +1236,7 @@ Reset the buffer
 ................
 
 Reset the buffer if the device is written to. For this step follow the
-sections makred with **TODO 5** in the skeleton.
+sections marked with **TODO 5** in the skeleton.
 
 Implement :c:func:`reset_buffer` and add the write operation to *kbd_fops*.
 
