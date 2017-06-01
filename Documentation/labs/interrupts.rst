@@ -905,7 +905,7 @@ Analize the following Linux code:
 * Keyboard initialization function :c:func:`i8042_setup_kbd`
 * The AT or PS/2 keyboard interrupt function :c:func:`atkbd_interrupt`
 
-1. Keyboard driver
+Keyboard driver
 ------------------
 
 The next exercise's objective is to create a driver that uses the
@@ -913,7 +913,7 @@ keyboard IRQ, inspect the incoming key codes and stores them in a
 buffer. The buffer will be accessible from userspace via character
 device driver.
 
-2. Request the I/O ports
+1. Request the I/O ports
 ------------------------
 
 The *kbd.c* file contains a skeleton for the keyboard driver. Browse
@@ -989,7 +989,7 @@ Lets remove the module and check that the I/O ports are released:
    root@qemux86:~# cat /proc/ioports | grep kbd
    root@qemux86:~#
 
-3. Interrupt handling routine
+2. Interrupt handling routine
 -----------------------------
 
 For his task we will implement and register an interrupt handler for
@@ -1042,7 +1042,7 @@ keyboard interrupt is generated.
 .. attention:: To get access to the keyboard on the virtual machine
 	       boot with "QEMU_DISPLAY=sdl make boot".
 
-4. Store ASCII keys to buffer
+3. Store ASCII keys to buffer
 -----------------------------
 
 Next, we want to collect the keystrokes in a buffer whose content we
