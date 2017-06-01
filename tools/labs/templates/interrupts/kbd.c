@@ -210,7 +210,7 @@ static int kbd_init(void)
 	err = register_chrdev_region(MKDEV(KBD_MAJOR, KBD_MINOR),
 				     KBD_NR_MINORS, MODULE_NAME);
 	if (err != 0) {
-		pr_err("register_region failed: %d", err);
+		pr_err("register_region failed: %d\n", err);
 		goto out;
 	}
 
@@ -232,7 +232,7 @@ static int kbd_init(void)
 			kbd_interrupt_handle,
 			IRQF_SHARED, MODULE_NAME, &devs[0]);
 	if (err != 0) {
-		pr_err("request_irq failed: %d", err);
+		pr_err("request_irq failed: %d\n", err);
 		goto out_release_regions;
 	}
 
