@@ -566,6 +566,8 @@ operations: the mutex is acquired before entering the critical area and
 releases to the critical area. Unlike spin-locks, these operations can only be
 used in process context.
 
+.. _atomic-variables:
+
 Atomic variables
 ----------------
 

@@ -1040,6 +1040,8 @@ message shown is ``Early bird gets tired``.
           the module. Find more information `here
           <http://tldp.org/LDP/lkmpg/2.6/html/x323.html>`_.
 
+.. _proc-info:
+
 7. Proc info
 ------------
 

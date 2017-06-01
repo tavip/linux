@@ -855,6 +855,8 @@ write more or less than the required size.
 
       .. image:: read2.png
 
+.. _ioctl:
+
 ioctl
 =====
 
@@ -950,8 +952,10 @@ driver will be called. An example of such a user-space call:
 	/* handle error */
     }
 
-Synchronization - waiting queues
-================================
+.. _waiting-queues:
+
+Waiting queues
+==============
 
 It is often necessary for a thread to wait for an operation to finish,
 but it is desirable that this wait is not busy-waiting. Using waiting

@@ -997,8 +997,7 @@ You will need to implement the following ioctl operations.
 
 * MY_IOCTL_TIMER_CANCEL to deactivate the timer.
 
-.. note:: Review `ioctl`_ section for a way to access the ioctl
-	  argument.
+.. note:: Review :ref:`ioctl` for a way to access the ioctl argument.
 
 .. note:: Review the `Timers`_ section for information on enabling /
    disabling a timer.  In the timer handler, display the current
@@ -1006,7 +1005,7 @@ You will need to implement the following ioctl operations.
 
 .. hint:: You can find the current process identifier using the *pid*
 	  and *comm* fields of the current process. For details,
-	  review `Proc Info`_.
+	  review :ref:`proc-info`.
 
 .. hint:: To use the device driver from userspace you must create the
 	  device character file */dev/deferred* using the mknod
@@ -1111,10 +1110,9 @@ TODOs from the skeleton.
 
 .. hint:: For synchronization use two wait queues and two flags.
 
-	  Review `Synchronization - waiting queues`_ on how to use
-	  waiting queue.
+	  Review :ref:`waiting-queues` on how to use waiting queue.
 
-	  Use atomic variables for flags. Review `Atomic variable`_.
+	  Use atomic variables for flags. Review :ref:`atomic-variables`.
 
 
 7. Buffer shared between timer and process
