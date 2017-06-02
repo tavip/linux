@@ -2,8 +2,11 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include <linux/timer.h>
+#include <linux/spinlock.h>
+#include <linux/sched.h>
 
-MODULE_DESCRIPTION("Crusher - sample m");
+MODULE_DESCRIPTION("Crusher - debugging module");
 MODULE_AUTHOR("Kernel Hacker");
 MODULE_LICENSE("GPL");
 
@@ -12,10 +15,8 @@ module_param(test, int, 0);
 
 typedef void (*foo_t)(void);
 
-void crusher_foo(void)
-{
-	pr_info("Hello from foo function\n");
-}
+spinlock_t lock;
+struct timer_list timer;
 
 struct crush_struct {
 	foo_t foo;
@@ -24,6 +25,19 @@ struct crush_struct {
 };
 
 struct crush_struct *g;
+
+void crusher_foo(void)
+{
+	pr_info("Hello from foo function\n");
+}
+
+int crusher_simple_call(void)
+{
+	pr_info("crusher: simple call\n");
+	crusher_foo();
+
+	return 0;
+}
 
 int crusher_invalid_access(void)
 {
@@ -95,23 +109,50 @@ static void crusher_free(void)
 	kfree(g);
 }
 
+void crusher_timer(unsigned long data)
+{
+	spin_lock(&lock);
+	pr_info("crusher from timer: %s %d g: %p\n", current->comm, current->pid, g);
+	spin_unlock(&lock);
+}
+
+int crusher_sync(void) {
+
+	spin_lock_init(&lock);
+
+	setup_timer(&timer, crusher_timer, 0);
+	mod_timer(&timer, jiffies + 4 * HZ);
+
+	spin_lock(&lock);
+	pr_info("crusher from proces: %s %d, g %p\n", current->comm, current->pid, g);
+	spin_unlock(&lock);
+
+	return 0;
+}
+
 static int crusher_init(void)
 {
 	pr_info("crusher module loaded!\n");
 
 	switch(test) {
 	case 0:
-		crusher_invalid_access();
+		crusher_simple_call();
 		break;
 	case 1:
-		crusher_use_before_init();
+		crusher_invalid_access();
 		break;
 	case 2:
-		crusher_use_after_free();
+		crusher_use_before_init();
 		break;
 	case 3:
+		crusher_use_after_free();
+		break;
+	case 4:
 		crusher_alloc();
 		crusher_free();
+		break;
+	case 5: 
+		crusher_sync();
 		break;
 	default:
 		pr_info("Test %d, not implemented\n", test);
