@@ -17,6 +17,7 @@ Kernel debug
    * gdb
    * DEBUG_SLAB
    * kmemleak
+   * lockdep
 
 .. slide:: dump_stack()
    :level: 2
@@ -202,6 +203,24 @@ kmemleak
 
    3. Identify the problem and fix it. Verify again using kmemleak that the leak was fixed.
 
+.. slide:: lockdep
+   :level: 2
+
+   * tracks locking patterns and warns if a deadlock is possible
+   * adds wrappers around locking calls
+
+   .. code-block:: c
+
+      /* process A */                /* process B */
+
+      spin_lock(&lock_a);            
+                                      spin_lock(&lock_b);
+      
+      spin_lock(&lock_b);
+                                      spin_lock(&lock_a);
+
+      do_stuff();                     do_stuff();
+
 lockdep
 =======
 
@@ -220,5 +239,19 @@ lockdep
         
          $ insmod skels/kernel_debug/crusher.ko test=5
 
-   3. Check the logs. If lockdep is enable you should see a warning in dmesg. Fix this issue.
+   3. Check the logs. If lockdep is enabled you should see a warning in dmesg. Fix this issue.
+
+Misc
+====
+
+   1. Insert the crusher module as follows:
+
+      .. code-block:: shell
+        
+         $ insmod skels/kernel_debug/crusher.ko test=6
+
+   2. Using the tools learned in this lab, identify and fix the problem.
+
+
+
 
