@@ -142,15 +142,22 @@ gdb
 .. slide:: DEBUG_SLAB
    :level: 2
 
-   * red zoning
-   * poisoning
+   * memory is allocated from *slabs*
+   * fixed sized (*32K*, *64K*)
+   * specific objects slabs (e.g *inode*, *task_struct*)
 
    .. image:: slab.jpg
 
+.. slide:: DEBUG_SLAB (2)
+   :level: 2
+
+   * red zoning
+   * poisoning
+
+   .. image:: poisonslab.png
+
 DEBUG_SLAB
 ==========
-
-[insert poison slide]
 
    1. Insert the crusher module as follows:
 
