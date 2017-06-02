@@ -509,7 +509,7 @@ called function when the device counter reaches 0.
 	  struct device_driver *driver;  /* Which driver has assigned this Device */
 
 	  void (*release) (struct device *dev);
-   };
+      };
 
 As usual, we have registration_registration / registration functions
 device_register and device_unregister.
@@ -1258,3 +1258,19 @@ buffer.
 
 .. hint:: The major and minor should be visible in the dev attribute
 	  of the misc device
+
+
+6. Monitor uevent notifications
+-------------------------------
+
+Use the **udevadm monitor** command and observe what happens when:
+
+* the bex.ko and bex_misc.ko modeules are inserted
+
+* a new device with the type "test" is created
+
+* a new device with the type "misc" and version 2 is created
+
+* a new device with the type "misc" and version 1 is created
+
+* all of the above devices are removed
