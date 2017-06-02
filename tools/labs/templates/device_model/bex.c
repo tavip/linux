@@ -31,12 +31,13 @@ static int bex_probe(struct device *dev)
 	return bex_drv->probe(bex_dev);
 }
 
-static void bex_remove(struct device *dev)
+static int bex_remove(struct device *dev)
 {
 	struct bex_device *bex_dev = to_bex_device(dev);
 	struct bex_driver *bex_drv = to_bex_driver(dev->driver);
 
 	bex_drv->remove(bex_dev);
+	return 0;
 }
 
 static int bex_add_dev(const char *name, const char *type, int version);
