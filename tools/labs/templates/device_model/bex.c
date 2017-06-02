@@ -86,7 +86,7 @@ struct bus_type bex_bus_type = {
 	.name	= "bex",
 	.match	= bex_match,
 	.probe  = bex_probe,
-	.remove  = bex_probe,
+	.remove  = bex_remove,
 	/* TODO 3: add bus groups attributes */
 	.bus_groups = bex_bus_groups,
 };
