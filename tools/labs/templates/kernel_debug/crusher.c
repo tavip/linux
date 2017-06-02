@@ -21,7 +21,7 @@ struct timer_list timer;
 struct crush_struct {
 	foo_t foo;
 	int *p;
-	char buf[4096];
+	char buf[16];
 };
 
 struct crush_struct *g;
@@ -116,6 +116,15 @@ void crusher_timer(unsigned long data)
 	spin_unlock(&lock);
 }
 
+void crusher_timer2(unsigned long data)
+{
+	struct crush_struct *cs = (struct crush_struct *)data;
+	pr_info("crusher from timer2: %s %d g: %p\n", current->comm, current->pid, &g);
+
+	cs->foo();
+}
+
+
 int crusher_sync(void) {
 
 	spin_lock_init(&lock);
@@ -126,6 +135,20 @@ int crusher_sync(void) {
 	spin_lock(&lock);
 	pr_info("crusher from proces: %s %d, g %p\n", current->comm, current->pid, g);
 	spin_unlock(&lock);
+
+	return 0;
+}
+
+int crusher_stack(void)
+{
+	struct crush_struct cs = {
+		.foo = crusher_foo,
+	};
+
+	pr_info("crusher: stack test\n");
+
+	setup_timer(&timer, crusher_timer, (unsigned long) &cs);
+	mod_timer(&timer, jiffies + 4 * HZ);
 
 	return 0;
 }
@@ -153,6 +176,10 @@ static int crusher_init(void)
 		break;
 	case 5: 
 		crusher_sync();
+		break;
+	case 6:
+		crusher_stack();
+		pr_info("\n");
 		break;
 	default:
 		pr_info("Test %d, not implemented\n", test);
