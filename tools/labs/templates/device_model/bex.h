@@ -12,8 +12,6 @@ struct bex_device {
 #define to_bex_device(drv) container_of(dev, struct bex_device, dev)
 
 struct bex_driver {
-	struct module *owner;
-
 	const char *type;
 
 	int (*probe)(struct bex_device *dev);
