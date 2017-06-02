@@ -2,8 +2,16 @@
 Linux Device Model
 ==================
 
+.. slideconf::
+   :theme: single-level
+   :autoslides: false
+
+.. slide:: Linux Device Model
+   :level: 1
+
 Overview
 ========
+
 
 Plug and Play is a technology that offers support for automatically adding and
 removing devices to your system. This reduces conflicts with the resources they
@@ -53,6 +61,45 @@ To maintain this information, the kernel uses the following entities:
     include devices (hierarchical view of all devices in the system), buses (bus
     view of devices according to how they are attached to buses), classes, etc.
 
+.. slide:: Linux devices model
+   :level: 2
+
+   * Why is it important?
+
+     * Hotplug
+
+     * Power management
+
+     * Allow application to discover devices and receive events about
+       devices
+
+.. slide:: Linux devices abstractions
+   :level: 2
+
+      * device - a physical device that is attached to a bus
+      * driver - a software entity that can be associated with a
+	device and performs operations with it
+      * bus - a device to which other devices can be attached
+      * class - a type of device that has a similar behavior
+	(e.g. discs, partitions, serial ports, etc.)
+
+
+.. slide:: Hotplug
+   :level: 2
+
+   * Adding and removing devices from the bug at runtime
+
+   * The bus needs to hardware facilities to detect such events
+
+   * The bus driver will create devices when such events are detected
+
+   * udev will receive notifications via netlinks sockets and it will
+     search for compatible modules and load them
+
+   * The bus driver will try to match the devices with the drivers and
+     if successful will probe the device
+
+
 sysfs
 =====
 
@@ -69,6 +116,20 @@ contains the following subdirectories:
   * kernel - kernel status information (logged-in users, hotplug)
   * modules - the list of modules currently loaded
   * power - information related to the power management subsystem
+
+.. slide:: sysfs top directories
+   :level: 2
+
+      * block - all block devices available in the system
+      * bus - types of bus to which physical devices are connected
+      * class - driver classes that are available in the system
+      * devices - the hierarchical structure of devices connected to
+	the system
+      * firmware - information from system firmware (ACPI)
+      * fs - information about mounted file systems
+      * kernel - kernel status information (logged-in users, hotplug)
+      * modules - the list of modules currently loaded
+      * power - information related to the power management subsystem
 
 As you can see, there is a correlation between the kernel data structures
 within the described model and the subdirectories in the sysfs virtual file
@@ -91,6 +152,17 @@ are as follows:
 .. **
 
 Other attributes are available, depending on the bus and driver used.
+
+.. slide:: sysfs typical attributes
+   :level: 2
+
+   * dev - Major and minor device identifier. It can be used to automatically
+     create entries in the /dev directory
+   * device - a symbolic link to the directory containing devices; It can be
+     used to discover the hardware devices that provide a particular service (for
+     example, the ethi PCI card)
+   * driver - a symbolic link to the driver directory (located in
+     /sys/bus/\*/drivers )
 
 Basic Structures in Linux Devices
 =================================
@@ -147,6 +219,27 @@ A kobject structure structure is defined as follows:
 	 unsigned int uevent_suppress : 1 ;
  };
 
+
+.. slide:: :c:type:`struct kobject`
+   :level: 2
+
+   .. code-block:: c
+
+      struct kobject {
+	  const char * name ;
+	  struct list_head entry ;
+	  struct kobject * parent ;
+	  struct kset * kset ;
+	  struct kobj_type * ktype ;
+	  struct sysfs_dirent * sd ;
+	  struct kref kref ;
+	  unsigned int state_initialized : 1 ;
+	  unsigned int state_in_sysfs : 1 ;
+	  unsigned int state_add_uevent_sent : 1 ;
+	  unsigned int state_remove_uevent_sent : 1 ;
+	  unsigned int uevent_suppress : 1 ;
+      };
+
 As we can see, the kobject structures are in a hierarchy : an object has a
 parent and holds a kset member, which contains objects on the same level.
 
@@ -200,6 +293,28 @@ In the Linux Device Model, a bus is represented by the struct bus_type:
  };
 
 .. **
+.. slide:: :c:type:`struct bus_type`
+   :level: 2
+
+      .. code-block:: c
+
+	 struct bus_type {
+	     const char *name;
+	     const char *dev_name;
+	     struct device *dev_root ;
+	     struct bus_attribute *bus_attrs;
+	     struct device_attribute *dev_attrs;
+	     struct driver_attribute *drv_attrs;
+	     structure subsys_private *p;
+
+	     int (*match) (device structure *dev,
+			   struct device_driver *drv);
+	     int (*uevent) (structure device *dev,
+			    struct kobj_uevent_env *env);
+	     int (*probe) (struct device *dev);
+	     int (*remove) (device structure * dev);
+
+	 };
 
 It is noticed that a bus is associated with a name, lists of default
 attributes, a number of specific functions, and the driver's private data. The
@@ -238,6 +353,27 @@ The match function is used when a new device or a new driver is added to the
 bus. Its role is to make a comparison between the device ID and the driver ID.
 The uevent function is called before generating a hotplug in user-space and has
 the role of adding environment variables.
+
+.. slide:: Matching device to drivers and sending uevents
+   :level: 2
+
+   .. code-block:: c
+
+      #include<linux/device.h>
+      #include<linux/string.h>
+
+      /* match devices to drivers;  Just do a simple name test */
+      static int my_match (structure device *dev, struct device_driver *drv)
+      {
+	  return !strncmp(dev_name(dev), drv->name, strlen(drv->name)) ;
+      }
+
+      /*  send user events */
+      static int my_uevent(struct device *dev, struct kobj_uevent_env *env)
+      {
+	  add_uevent_var(env, "MODALIAS=<busid>%s", dev_name(dev));
+	  return 0 ;
+      }
 
 Other possible operations on a bus are browsing the drivers or devices attached
 to it. Although we can not directly access them (lists of drives and devices
@@ -299,6 +435,30 @@ An example of defining an attribute for my_bus is shown below:
 The bus is represented by both a bus_type object and a device object, as we
 will see later (the bus is also a device).
 
+.. slide:: Bus attributes
+   :level: 2
+
+   .. code-block:: c
+
+      static ssize_t
+      del_store(struct bus_type *bt, const char *buf, size_t count)
+      {
+	  ...
+      }
+      BUS_ATTR(del, S_IWUSR, NULL, del_store);
+
+      static struct attribute *bex_bus_attrs[] = {
+	  &bus_attr_add.attr,
+	  &bus_attr_del.attr,
+	  NULL
+      };
+      ATTRIBUTE_GROUPS(bex_bus);
+
+      struct bus_type bex_bus_type = {
+	  ...
+	  .bus_groups = bex_bus_groups,
+      };
+
 Devices
 -------
 
@@ -332,12 +492,55 @@ Structure fields include the parent device that is usually a controller, the
 associated kobject object, the bus it is located on, the device driver, and a
 called function when the device counter reaches 0.
 
+.. slide:: :c:type:`struct device`
+   :level: 2
+
+   .. code-block:: c
+
+      struct device {
+
+	  struct device *parent ;
+	  struct device_private *p;
+	  struct kobject kobj;
+
+	  const char *init_name;  /* Initial name of the device */
+
+	  struct bus_type *bus;  /* Type of bus device is on */
+	  struct device_driver *driver;  /* Which driver has assigned this Device */
+
+	  void (*release) (struct device *dev);
+   };
+
 As usual, we have registration_registration / registration functions
 device_register and device_unregister.
 
 To work with the attributes, we have structure structure_atribute_attribute ,
 DEVICE_ATTR macrodefine for definition, and device_create_file and
 device_remove_file functions to add the attribute to the device.
+
+.. slide:: Device attributes
+   :level: 2
+
+   .. code-block:: c
+
+      static ssize_t
+      type_show(struct device *dev, struct device_attribute *attr, char *buf)
+      {
+	...
+      }
+      DEVICE_ATTR_RO(type);
+
+      static struct attribute *bex_dev_attrs[] = {
+	  &dev_attr_type.attr,
+	  &dev_attr_version.attr,
+	  NULL
+      };
+      ATTRIBUTE_GROUPS(bex_dev);
+
+      struct device_type bex_device_type = {
+	  .groups = bex_dev_groups,
+      ...
+      };
 
 One important thing to note is that it usually does not work directly with a
 struct device structure, but with a structure that contains it, like:
@@ -353,29 +556,63 @@ struct device structure, but with a structure that contains it, like:
 
 .. **
 
-Typically, a module will export registration/deregistration features of such
-a device, as shown below:
+Typically, a bus driver will export function to add or remove such a
+device, as shown below:
 
-Show code
+.. code-block:: c
 
-As can be seen, the my_register_device and my_unregister_device for adding or
-removing a device from a bus are defined in the file where the bus is defined.
-Do not initialize device-type objects; They will initialize when they are
-discovered in the system (hotplug or direct drive entry) and call
-my_register_device to add to the bus.
+   static int bex_add_dev(const char *name, const char *type, int version)
+   {
+	struct bex_device *bex_dev;
 
-For use (in the implementation of the driver), a structure of the type
-exported, initialized and registered with the exported method of the bus must
-be declared:
+	bex_dev = kzalloc(sizeof(*bex_dev), GFP_KERNEL);
+	if (!bex_dev)
+		return -ENOMEM;
 
-Show example device recording
+	bex_dev->type = kstrdup(type, GFP_KERNEL);
+	bex_dev->version = version;
+
+	bex_dev->dev.bus = &bex_bus_type;
+	bex_dev->dev.type = &bex_device_type;
+	bex_dev->dev.parent = NULL;
+
+	dev_set_name(&bex_dev->dev, "%s", name);
+
+	return device_register(&bex_dev->dev);
+   }
+
+
+   static int bex_del_dev(const char *name)
+   {
+	struct device *dev;
+
+	dev = bus_find_device_by_name(&bex_bus_type, NULL, name);
+	if (!dev)
+		return -EINVAL;
+
+	device_unregister(dev);
+	put_device(dev);
+
+	return 0;
+   }
+
+
+.. slide:: Adding and removing devices
+   :level: 2
+
+      * The bus driver may automatically discover devices and add /
+	remove them
+
+      * The bus drive may rely on other subsystems (like ACPI or
+	DeviceTree) to add / remove devices
+
 
 Drivers
 -------
 
 Linux Device Model is used to allow very easy association between system
 devices and drivers. Drivers can export information independent of the physical
-device from the back.
+device.
 
 In sysfs driver information has no single subdirectory associated; They can be
 found in the directory structure in different places: in the /sys/module there
@@ -405,6 +642,27 @@ A device driver is identified by the structure structure of device_driver :
 
 .. **
 
+.. slide:: :c:type:`struct device_driver`
+   :level: 2
+
+   .. code-block:: c
+
+      struct device_driver {
+	  const char *name;
+	  structure bus_type *bus;
+
+	  struct driver_private *p;
+
+	  struct module *owner;
+	  const char *mod_name;  / * Used for built-in modules * /
+
+	  int (*probe) (struct device *dev);
+	  int (*remove) (struct device *dev);
+	  void (*shutdown) (struct device *dev);
+	  int (*suspend) (structure device * dev , pm_message_t state );
+	  int (*resume) (struct device * dev );
+      };
+
 Among the structure fields we find the name of the driver (appears in sysfs ),
 the bus with which the driver works, and functions called at various times in a
 device's operation.
@@ -417,46 +675,82 @@ definition of DRIVER_ATTR for definition, and the driver_create_file and
 driver_remove_file functions for adding the attribute to the device.
 
 As with devices, the device_driver structure structure is usually incorporated
-into another structure specific to a particular PCI (PCI, USB, etc.):
-
-Show code
-
-
-It is noticed that the driver registration / registration operations are
-exported for use in other modules.
-
-As with devices, driver operations are defined at the initialization of the
-bus, and are exported to be used by drivers. When a driver working with devices
-attached to this bus is deployed, it will call my_register_driver and
-my_unregister_driver to my_unregister_driver with it.
-
-For use (in the implementation of the driver), a structure of the type
-exported, initialized and registered with the exported method of the bus must
-be declared:
-
+into another structure specific to a particular bus (PCI, USB, etc.):
 
 .. code-block:: c
 
-  /* mydriver.c */
+   struct bex_driver {
+	const char *type;
 
-  static struct my_driver mydriver = {
-	 .module = THIS_MODULE ,
-	 .driver = {
-		 .name = "mydriver" ,
-	 } ,
-  };
-  // ...
+	int (*probe)(struct bex_device *dev);
+	void (*remove)(struct bex_device *dev);
 
- // register
- Int err ;
- err = my_register_driver (&mydriver);
- if (err < 0) {
-	 / * Handle error * /
- }
- // ..
+	struct device_driver driver;
+   };
 
- // unregister
- my_unregister_driver (&mydriver);
+
+Driver registration / registration operations are exported for use in
+other modules:
+
+.. code-block:: c
+
+   struct bex_driver bex_misc_driver = {
+       .type = "misc",
+       .probe = bex_misc_probe,
+       .remove = bex_misc_remove,
+       .driver = {
+	   .owner = THIS_MODULE,
+	   .name = "bex_misc",
+       },
+   };
+
+   ...
+
+   /* register driver */
+   ret = bex_register_driver(&bex_misc_driver);
+   if (ret) {
+     ...
+   }
+
+   ...
+
+   /* unregister driver */
+   err = bex_register_driver(&bex_misc_driver);
+   if(err) {
+     ...
+   }
+
+
+.. slide:: Registering and unregistering a driver for a particular bus
+   :level: 2
+
+   .. code-block:: c
+
+      struct bex_driver bex_misc_driver = {
+	  .type = "misc",
+	  .probe = bex_misc_probe,
+	  .remove = bex_misc_remove,
+	  .driver = {
+	      .owner = THIS_MODULE,
+	      .name = "bex_misc",
+	  },
+      };
+
+      ...
+
+      /* register driver */
+      ret = bex_register_driver(&bex_misc_driver);
+      if (ret) {
+	...
+      }
+
+      ...
+
+      /* unregister driver */
+      err = bex_register_driver(&bex_misc_driver);
+      if(err) {
+	...
+      }
 
 .. **
 
@@ -506,9 +800,31 @@ A generic class is described by structure class structure:
 .. **
 
 The class_register and class_unregister functions for initialization /
-deinterlacing :
+and cleanup :
 
-Show code
+.. code-block:: c
+
+   static struct class my_class = {
+       .name = "myclass",
+   };
+
+   static int __init my_init(void)
+   {
+       int err;
+       ...
+       err = class_register(&my_class);
+       if (err < 0) {
+	   /* handle error */
+       }
+       ...
+   }
+
+   static void __exit my_cleanup (void)
+   {
+       ...
+       class_unregister(&my_class);
+       ...
+   }
 
 
 A class associated with a device is described by the device structure. The
@@ -580,6 +896,7 @@ This will choose between events generated only those belonging subsystem
 pnp(connected to bus PNP) and an id attribute value PNP0400. When will find
 this rule will execute the command that inserts the appropriate driver in the
 kernel.
+
 
 Plug and Play
 -------------
@@ -838,7 +1155,7 @@ Exercises
 
    .. include:: exercises-summary.hrst
 
-   .. |LAB_NAME| replace:: interrupts
+   .. |LAB_NAME| replace:: device_model
 
    Generate the skeleton for this lab (task name should be empty).
 
