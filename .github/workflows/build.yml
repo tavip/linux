@@ -1,0 +1,24 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install packages
+      run: sudo apt install imagemagick graphviz ditaa
+    - name: Build docs
+      run: cd tools/labs && make docs
+    - name: Publish
+      # not yet implemented
+      run: env
