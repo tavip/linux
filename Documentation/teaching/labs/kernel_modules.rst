@@ -855,12 +855,8 @@ Exercises
 
 .. _exercises_summary:
 
-.. important::
-
-   .. include:: exercises-summary.hrst
-
-   .. |LAB_NAME| replace:: kernel_modules
-
+.. include:: exercises-summary.hrst
+.. |LAB_NAME| replace:: kernel_modules
 
 0. Intro
 --------
