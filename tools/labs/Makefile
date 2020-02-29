@@ -32,7 +32,10 @@ copy: $(YOCTO_IMAGE)
 	rmdir $(TEMPDIR)
 
 docs:
-	pip install --user -r requirements.txt
+	cd docs && docker-compose build
+	cd docs && docker-compose run docs-build bash -c "cd /linux/tools/labs && make _docs"
+
+_docs:
 	$(MAKE) -C $(KDIR) DOCBOOKS= SPHINXDIRS="teaching" htmldocs
 	$(MAKE) -C $(KDIR) BUILDDIR=$(KDIR)/Documentation/output/slides DOCBOOKS= SPHINXDIRS="teaching" slides
 	for i in $(KDIR)/Documentation/output/slides/teaching/lectures/*.html; do name=$$(basename $$i .html); cp $$i $(KDIR)/Documentation/output/teaching/lectures/$$name-slides.html; done
@@ -41,4 +44,4 @@ docs:
 clean::
 	-rm -rf skels
 
-.PHONY: skels build copy docs clean
+.PHONY: skels build copy docs clean docker

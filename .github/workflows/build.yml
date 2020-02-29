@@ -16,9 +16,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install packages
-      run: sudo apt install imagemagick graphviz ditaa
-    - name: Build docs
-      run: cd tools/labs && make docs
+      run: |
+            apt update
+            apt -y install software-properties-common make git python python-pip ditaa
+            pip install -r tools/labs/requirements.txt
+            cd tools/labs && make docs
     - name: Publish
       # not yet implemented
       run: env
