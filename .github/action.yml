@@ -1,0 +1,7 @@
+# action.yml
+name: 'docker-docs-build'
+description: 'Docker based documentation build'
+runs:
+  using: 'docker'
+  image: '../tools/labs/docs/Dockerfile'
+
