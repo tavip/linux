@@ -79,6 +79,7 @@ static struct vfsmount *shm_mnt __ro_after_init;
 #include <linux/rmap.h>
 #include <linux/uuid.h>
 #include <linux/quotaops.h>
+#include <linux/rcupdate_wait.h>
 
 #include <linux/uaccess.h>
 
@@ -1508,8 +1509,7 @@ static int shmem_writepage(struct page *page, struct writeback_control *wbc)
 
 		mutex_unlock(&shmem_swaplist_mutex);
 		BUG_ON(folio_mapped(folio));
-		swap_writepage(&folio->page, wbc);
-		return 0;
+		return swap_writepage(&folio->page, wbc);
 	}
 
 	mutex_unlock(&shmem_swaplist_mutex);
@@ -1564,15 +1564,13 @@ static struct folio *shmem_swapin_cluster(swp_entry_t swap, gfp_t gfp,
 {
 	struct mempolicy *mpol;
 	pgoff_t ilx;
-	struct page *page;
+	struct folio *folio;
 
 	mpol = shmem_get_pgoff_policy(info, index, 0, &ilx);
-	page = swap_cluster_readahead(swap, gfp, mpol, ilx);
+	folio = swap_cluster_readahead(swap, gfp, mpol, ilx);
 	mpol_cond_put(mpol);
 
-	if (!page)
-		return NULL;
-	return page_folio(page);
+	return folio;
 }
 
 /*
@@ -4456,8 +4454,8 @@ static void __init shmem_destroy_inodecache(void)
 }
 
 /* Keep the page in page cache instead of truncating it */
-static int shmem_error_remove_page(struct address_space *mapping,
-				   struct page *page)
+static int shmem_error_remove_folio(struct address_space *mapping,
+				   struct folio *folio)
 {
 	return 0;
 }
@@ -4472,7 +4470,7 @@ const struct address_space_operations shmem_aops = {
 #ifdef CONFIG_MIGRATION
 	.migrate_folio	= migrate_folio,
 #endif
-	.error_remove_page = shmem_error_remove_page,
+	.error_remove_folio = shmem_error_remove_folio,
 };
 EXPORT_SYMBOL(shmem_aops);
 
