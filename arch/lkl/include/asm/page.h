@@ -4,7 +4,7 @@
 
 #ifndef CONFIG_MMU
 #define ARCH_PFN_OFFSET	(memory_start >> PAGE_SHIFT)
-#include <asm-generic/page.h>
+#include <asm/page-nommu.h>
 #else // CONFIG_MMU
 #include <asm/page-mmu.h>
 #endif // CONFIG_MMU
