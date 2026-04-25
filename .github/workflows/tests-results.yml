@@ -1,0 +1,36 @@
+name: Test Results
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+permissions: {}
+
+jobs:
+  test-results:
+    name: Test Results
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure'
+    permissions:
+      # for creating checks
+      checks: write
+      # for posting comments on PRs
+      pull-requests: write
+      # for accessing artifacts
+      actions: read
+      contents: read
+    steps:
+      - name: Download and Extract Artifacts
+        uses: actions/download-artifact@v5
+        with:
+           run-id: ${{ github.event.workflow_run.id }}
+           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          commit: ${{ github.event.workflow_run.head_sha }}
+          event_file: Event File/event.json
+          event_name: ${{ github.event.workflow_run.event }}
+          files: "*/*.xml"
