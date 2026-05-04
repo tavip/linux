@@ -34,7 +34,7 @@ jobs:
             shell: msys2 {0}
           - displayTargetName: clang-build
             os: unix
-            runs_on: ubuntu-22.04
+            runs_on: ubuntu-24.04
             shell: bash
             build_options: "LLVM=1 CROSS_COMPILE=x86_64-linux-gnu"
     timeout-minutes: 100
@@ -161,7 +161,7 @@ jobs:
         run: tools/lkl/scripts/checkpatch.sh
 
   fuzzers:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     name: fuzzers
     env:
       PROTOBUF_MUTATOR_DIR: /tmp/libprotobuf-mutator
