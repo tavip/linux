@@ -148,6 +148,8 @@ $(output-symdump): $(modpost-deps) FORCE
 
 ifeq ($(findstring elf,$(if $(CONFIG_OUTPUT_FORMAT),$(CONFIG_OUTPUT_FORMAT),elf)),elf)
 __modpost: $(output-symdump)
+else
+$(shell touch .vmlinux.export.o)
 endif
 PHONY += FORCE
 FORCE:
