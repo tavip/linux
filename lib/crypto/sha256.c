@@ -272,7 +272,7 @@ EXPORT_SYMBOL(sha256);
  * Pre-boot environment (as indicated by __DISABLE_EXPORTS being defined)
  * doesn't need either HMAC support or interleaved hashing support
  */
-#ifndef __DISABLE_EXPORTS
+#if !defined(__DISABLE_EXPORTS) || defined(__CYGWIN__)
 
 #ifndef sha256_finup_2x_arch
 static bool sha256_finup_2x_arch(const struct __sha256_ctx *ctx,
