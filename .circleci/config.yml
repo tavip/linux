@@ -91,26 +91,11 @@ do_steps: &do_steps
 
 ## Customize the test machine
 jobs:
-  x86_64:
-   docker:
-     - image: lkldocker/circleci-x86_64:v1.4
-   environment:
-     CROSS_COMPILE: ""
-     MKARG: "dpdk=no"
-   <<: *do_steps
-
   i386:
    docker:
      - image: lkldocker/circleci-i386:v1.4
    environment:
      CROSS_COMPILE: ""
-   <<: *do_steps
-
-  mingw32:
-   docker:
-     - image: lkldocker/circleci-mingw:v1.4
-   environment:
-     CROSS_COMPILE: "i686-w64-mingw32-"
    <<: *do_steps
 
   android-arm32:
@@ -147,22 +132,10 @@ jobs:
      VALGRIND: 1
    <<: *do_steps
 
-  x86_64_qemu:
-   docker:
-     - image: lkldocker/circleci-qemu-x86_64:v1.4
-   environment:
-     CROSS_COMPILE: ""
-     MKARG: "dpdk=no"
-     LKL_QEMU_TEST: 1
-   <<: *do_steps
-
 workflows:
   version: 2
   build:
     jobs:
-     - x86_64
-     - x86_64_qemu
-     - mingw32
      - android-aarch64
      - freebsd11_x86_64
      - i386
