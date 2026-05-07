@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - displayTargetName: ubuntu-22.04
+          - displayTargetName: linux
             os: unix
             runs_on: ubuntu-22.04
             shell: bash
@@ -108,12 +108,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update -y
-          sudo apt install -y ccache libjsmn-dev libfuse3-dev
-      - name: Install clang toolchain
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt update -y
-          sudo apt install -y clang lld llvm
+          sudo apt install -y ccache libjsmn-dev libfuse3-dev clang lld llvm qemu-system-x86 qemu-utils sshpass cloud-image-utils
       - name: Install patched binutils for Windows
         if: runner.os == 'Windows'
         run: |
@@ -144,6 +139,16 @@ jobs:
           sudo sh -c "echo 0 > /proc/sys/vm/mmap_min_addr"
           echo "setting env variable (debug)"
           echo "ZPOLINE_DEBUG=0" >> "$GITHUB_ENV"
+      - name: Start QEMU
+        if: matrix.displayTargetName == 'linux'
+        run: |
+          ./tools/lkl/scripts/qemu-x86_64-make-images.sh
+          sudo chmod a+rw /dev/kvm
+          . tools/lkl/scripts/qemu-x86_64-start-and-set-env.sh
+          echo MYHOST="$HOST" >> $GITHUB_ENV
+          echo MYSSH="$MYSSH" >> $GITHUB_ENV
+          echo MYSCP="$MYSCP" >> $GITHUB_ENV
+          echo LKL_QEMU_TEST=1 >> $GITHUB_ENV
       - name: Build
         run: |
           make -j4 -C tools/lkl ${{ matrix.build_options }}
