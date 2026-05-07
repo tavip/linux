@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0
 #include <stdio.h>
 #include <unistd.h>
-#include <string.h>
-#include <time.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <lkl.h>
 #include <lkl_host.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <inttypes.h>
 
 #include "test.h"
 #include "cla.h"
@@ -20,81 +18,68 @@ static struct {
 } cla;
 
 struct cl_arg args[] = {
-	{ "type", 't', "filesystem type", 1, CL_ARG_STR, &cla.fstype },
 	{ "pciname", 'n', "PCI device name (as %x:%x:%x.%x format)", 1,
 	  CL_ARG_STR, &cla.pciname },
 	{ 0 },
 };
 
-static char mnt_point[32];
 static char bootparams[128];
 
-static int lkl_test_umount_dev(void)
+#define min(a, b) (a < b ? a : b)
+
+static int lkl_test_blkdev(void)
 {
-	long ret, ret2;
-
-	ret = lkl_sys_chdir("/");
-
-	ret2 = lkl_umount_blkdev(LKL_MKDEV(259, 0), 0, 1000);
-
-	lkl_test_logf("%ld %ld", ret, ret2);
-
-	if (!ret && !ret2)
-		return TEST_SUCCESS;
-
-	return TEST_FAILURE;
-}
-
-struct lkl_dir *dir;
-
-static int lkl_test_opendir(void)
-{
+	char dev_str[] = { "/dev/xxxxxxxx" };
+	char buffer[64*1024];
+	uint64_t size, read = 0;
 	int err;
+	int fd;
 
-	dir = lkl_opendir(mnt_point, &err);
+	snprintf(dev_str, sizeof(dev_str), "/dev/%08x", LKL_MKDEV(259, 0));
 
-	lkl_test_logf("lkl_opedir(%s) = %d %s\n", mnt_point, err,
-		      lkl_strerror(err));
-
-	if (err == 0)
-		return TEST_SUCCESS;
-
-	return TEST_FAILURE;
-}
-
-static int lkl_test_readdir(void)
-{
-	struct lkl_linux_dirent64 *de = lkl_readdir(dir);
-	int wr = 0;
-
-	while (de) {
-		wr += lkl_test_logf("%s ", de->d_name);
-		if (wr >= 70) {
-			lkl_test_logf("\n");
-			wr = 0;
-			break;
-		}
-		de = lkl_readdir(dir);
+	err = lkl_sys_mknod(dev_str, LKL_S_IFBLK | 0600, LKL_MKDEV(259, 0));
+	if (err < 0) {
+		lkl_test_logf("mknod failed: %s\n", lkl_strerror(err));
+		return TEST_FAILURE;
 	}
 
-	if (lkl_errdir(dir) == 0)
-		return TEST_SUCCESS;
+	fd = lkl_sys_open(dev_str, LKL_O_RDONLY, 0);
+	if (fd < 0) {
+		lkl_test_logf("open failed: %s\n", lkl_strerror(fd));
+		return TEST_FAILURE;
+	}
 
-	return TEST_FAILURE;
+	err = lkl_sys_ioctl(fd, LKL_BLKGETSIZE64, (unsigned long)&size);
+	if (err < 0) {
+		lkl_test_logf("BLKGETSIZE64 failed: %s\n", lkl_strerror(fd));
+		lkl_sys_close(fd);
+		return TEST_FAILURE;
+	}
+
+	while (read < size) {
+		err = lkl_sys_read(fd, buffer,
+				   min(sizeof(buffer), size - read));
+		if (err <= 0) {
+			lkl_test_logf("read failed: %s\n", lkl_strerror(err));
+			lkl_sys_close(fd);
+			return TEST_FAILURE;
+		}
+		read += err;
+	}
+
+	lkl_sys_close(fd);
+	lkl_test_logf("read %" PRIu64 " bytes\n", read);
+
+	return TEST_SUCCESS;
 }
 
-LKL_TEST_CALL(mount_dev, lkl_mount_blkdev, 0, LKL_MKDEV(259, 0),
-	      cla.fstype, 0, NULL, mnt_point, sizeof(mnt_point))
-LKL_TEST_CALL(closedir, lkl_closedir, 0, dir);
-LKL_TEST_CALL(chdir_mnt_point, lkl_sys_chdir, 0, mnt_point);
 LKL_TEST_CALL(start_kernel, lkl_start_kernel, 0, bootparams);
 LKL_TEST_CALL(stop_kernel, lkl_sys_halt, 0);
 
 struct lkl_test tests[] = {
-	LKL_TEST(start_kernel),	   LKL_TEST(mount_dev),
-	LKL_TEST(chdir_mnt_point), LKL_TEST(opendir),
-	LKL_TEST(readdir),	   LKL_TEST(closedir),
-	LKL_TEST(umount_dev),	   LKL_TEST(stop_kernel),
+	LKL_TEST(start_kernel),
+	LKL_TEST(blkdev),
+	LKL_TEST(stop_kernel),
 };
 
 int main(int argc, const char **argv)
@@ -115,7 +100,7 @@ int main(int argc, const char **argv)
 	}
 
 	ret = lkl_test_run(tests, sizeof(tests) / sizeof(struct lkl_test),
-			"disk-vfio-pci %s", cla.fstype);
+			"disk-vfio-pci");
 
 	lkl_cleanup();
 

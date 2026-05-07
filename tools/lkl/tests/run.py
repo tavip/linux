@@ -65,10 +65,7 @@ tests = [
     'config',
     'hijack-test.sh',
     'LKL_HIJACK_ZPOLINE=1 hijack-test.sh',
-    'disk-vfio-pci.sh -t ext4 run',
-    'disk-vfio-pci.sh -t btrfs run',
-    'disk-vfio-pci.sh -t vfat run',
-    'disk-vfio-pci.sh -t xfs run'
+    'disk-vfio-pci.sh',
 ]
 
 parser = argparse.ArgumentParser(description='LKL test runner')
