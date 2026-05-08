@@ -56,7 +56,7 @@ static void print_log(void)
 {
 	char last;
 
-	printf(" log: |\n");
+	printf(" log: |1\n");
 	last = '\n';
 	while (head != tail) {
 		if (last == '\n')
