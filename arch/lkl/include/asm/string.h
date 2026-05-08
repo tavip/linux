@@ -51,9 +51,16 @@ static inline void *__memmove(void *dest, const void *src, size_t count)
 
 #else /* __SANITIZE_ADDRESS__ */
 
-#undef memcpy
+void *__asan_memset(void *addr, int c, ssize_t len);
+void *__asan_memmove(void *dest, const void *src, ssize_t len);
+void *__asan_memcpy(void *dest, const void *src, ssize_t len);
+
 #undef memset
+#define memset(s, c, n) __asan_memset(s, c, n)
 #undef memmove
+#define memmove(dst, src, len) __asan_memmove(dst, src, len)
+#undef memcpy
+#define memcpy(dst, src, len) __asan_memcpy(dst, src, len)
 
 #endif /* __SANITIZE_ADDRESS__ */
 
