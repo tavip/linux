@@ -35,13 +35,13 @@ function cleanfs()
     set -e
 
     if ! [ -z $ANDROID_WDIR ]; then
-        adb shell rm $1
+        adb shell rm $file
         adb shell rm $ANDROID_WDIR/disk
     elif ! [ -z $BSD_WDIR ]; then
-        $MYSSH rm $1
+        $MYSSH rm $file
         $MYSSH rm $BSD_WDIR/disk
     else
-        rm $1
+        rm $file
     fi
 }
 
@@ -65,5 +65,5 @@ lkl_test_plan 1 "disk $fstype"
 lkl_test_run 1 prepfs $fstype
 lkl_test_exec $script_dir/disk -d $file -t $fstype $@
 lkl_test_plan 1 "disk $fstype"
-lkl_test_run 1 cleanfs $file
+lkl_test_run 1 cleanfs
 
