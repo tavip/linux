@@ -139,7 +139,8 @@ endef
 
 define llvm_target_to_ld_fmt
   $(if $(filter $(CROSS_COMPILE),x86_64-linux-gnu),elf64-x86-64,\
-    $(error Unsupported LLVM target $(CROSS_COMPILE)))
+    $(if $(filter $(CROSS_COMPILE),x86_64-unknown-freebsd),elf64-x86-64-freebsd, \
+    $(error Unsupported LLVM target $(CROSS_COMPILE))))
 endef
 
 define llvm_sysroot

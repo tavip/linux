@@ -37,6 +37,12 @@ jobs:
             runs_on: ubuntu-22.04
             shell: bash
             build_options: "LLVM=1 CROSS_COMPILE=x86_64-linux-gnu"
+          - displayTargetName: freebsd
+            os: unix
+            runs_on: ubuntu-22.04
+            shell: bash
+            build_options: "LLVM=1 CROSS_COMPILE=x86_64-unknown-freebsd SYSROOT=~/freebsd-sysroot"
+            make_sysroot: "./tools/lkl/scripts/freebsd-make-sysroot.sh"
     timeout-minutes: 100
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -149,10 +155,14 @@ jobs:
           echo MYSSH="$MYSSH" >> $GITHUB_ENV
           echo MYSCP="$MYSCP" >> $GITHUB_ENV
           echo LKL_QEMU_TEST=1 >> $GITHUB_ENV
+      - name: Make sysroot
+        run: |
+          ${{ matrix.make_sysroot }}
       - name: Build
         run: |
           make -j4 -C tools/lkl ${{ matrix.build_options }}
       - name: Tests
+        if: matrix.displayTargetName != 'freebsd'
         run: mkdir /tmp/junit && make -C tools/lkl run-tests tests="--junit-dir /tmp/junit"
       - name: Save test results
         uses: actions/upload-artifact@v4
