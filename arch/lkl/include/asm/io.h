@@ -106,7 +106,16 @@ static inline void __iounmap(void __iomem *addr)
 #define iounmap __iounmap
 #endif
 
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnull-pointer-arithmetic"
+#endif
+
 #include <asm-generic/io.h>
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 #endif /* _ASM_LKL_IO_H */
 
