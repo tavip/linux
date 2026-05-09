@@ -249,6 +249,12 @@ static int lklfuse_truncate(const char *path, off_t off,
 	return ret;
 }
 
+#ifdef __FreeBSD__
+#define O_LARGEFILE 0
+#define O_NOATIME 0
+#define O_TMPFILE 0
+#endif
+
 static int lklfuse_open3(const char *path, bool create, mode_t mode,
 	                 struct fuse_file_info *fi)
 {

@@ -21,6 +21,9 @@
 #include <sys/mman.h>
 #include <poll.h>
 #include <limits.h>
+#ifdef __FreeBSD__
+#include <pthread_np.h>
+#endif
 #include <lkl_host.h>
 #include "iomem.h"
 #include "jmp_buf.h"
