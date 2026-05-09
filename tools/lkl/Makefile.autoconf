@@ -14,12 +14,12 @@ $(shell echo "CONFIG_$(1)=$(2)" >> $(OUTPUT)/kernel.config)
 endef
 
 define find_include
-  $(eval include_paths=$(shell $(CC) -E -Wp,-v -xc /dev/null 2>&1 | grep '^ '))
-  $(foreach f, $(include_paths), $(wildcard $(f)/$(1)))
+  $(eval include_paths=$(shell $(CC) $(SYSROOT_FLAGS) -E -Wp,-v -xc /dev/null 2>&1 | grep '^ '))
+  $(foreach f,$(include_paths),$(wildcard $(f)/$(1)))
 endef
 
 define is_defined
-$(shell $(CC) -dM -E - </dev/null | grep $(1))
+$(shell $(CC) $(SYSROOT_FLAGS) -dM -E - </dev/null | grep $(1))
 endef
 
 define android_host
@@ -142,6 +142,11 @@ define llvm_target_to_ld_fmt
     $(error Unsupported LLVM target $(CROSS_COMPILE)))
 endef
 
+define llvm_sysroot
+  CFLAGS += --target=$(CROSS_COMPILE) --sysroot=$(SYSROOT) -I$(SYSROOT)/usr/local/include
+  LDFLAGS += --target=$(CROSS_COMPILE) --sysroot=$(SYSROOT) -L$(SYSROOT)/usr/local/lib
+endef
+
 define do_autoconf_llvm
   $(eval LLVM_PREFIX := $(if $(filter %/,$(LLVM)),$(LLVM)))
   $(eval LLVM_SUFFIX := $(if $(filter -%,$(LLVM)),$(LLVM)))
@@ -153,6 +158,8 @@ define do_autoconf_llvm
   $(eval LD := $(LLVM_PREFIX)ld.lld$(LLVM_SUFFIX))
   $(eval CC := $(LLVM_PREFIX)clang$(LLVM_SUFFIX))
   $(eval LD_FMT := $(call llvm_target_to_ld_fmt))
+  $(if $(SYSROOT),$(eval SYSROOT_FLAGS=--sysroot $(SYSROOT)))
+  $(if $(SYSROOT),$(call llvm_sysroot))
 endef
 
 define define_libprotobuf_mutator
