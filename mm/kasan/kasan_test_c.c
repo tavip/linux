@@ -2135,6 +2135,8 @@ static void copy_user_test_oob(struct kunit *test)
 	size_t size = 128 - KASAN_GRANULE_SIZE;
 	int __maybe_unused unused;
 
+	KASAN_TEST_NEEDS_CONFIG_ON(test, CONFIG_MMU);
+
 	kmem = kunit_kmalloc(test, size, GFP_KERNEL);
 	KUNIT_ASSERT_NOT_ERR_OR_NULL(test, kmem);
 
@@ -2251,9 +2253,7 @@ static struct kunit_case kasan_kunit_test_cases[] = {
 	KUNIT_CASE(copy_to_kernel_nofault_oob),
 #endif
 	KUNIT_CASE(rust_uaf),
-#ifdef CONFIG_MMU
 	KUNIT_CASE(copy_user_test_oob),
-#endif
 	{}
 };
 
